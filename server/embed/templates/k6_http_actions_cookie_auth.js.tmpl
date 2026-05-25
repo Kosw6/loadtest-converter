@@ -1,0 +1,302 @@
+import http from "k6/http";
+import { check, sleep } from "k6";
+import { SharedArray } from "k6/data";
+
+{{- if index .Extra "total_requests" }}
+export const options = {
+  scenarios: {
+    default: {
+      executor: "shared-iterations",
+      vus: {{ .VUs }},
+      iterations: {{ index .Extra "total_requests" }},
+      maxDuration: "{{ .Duration }}",
+    },
+  },
+};
+{{- else if .RPS }}
+export const options = {
+  scenarios: {
+    default: {
+      executor: "constant-arrival-rate",
+      rate: {{ .RPS }},
+      timeUnit: "1s",
+      duration: "{{ .Duration }}",
+      preAllocatedVUs: {{ .VUs }},
+    },
+  },
+};
+{{- else }}
+export const options = {
+  vus: {{ .VUs }},
+  duration: "{{ .Duration }}",
+};
+{{- end }}
+
+const BASE_URL = "{{ .BaseURL }}";
+const FLOW = "{{ .Flow }}";
+
+const USERS_FILE = "{{ .Users.File }}";
+const USER_KEY = "{{ .Users.Key }}";
+const USER_ASSIGN = "{{ .Users.Assign }}";
+
+const PARAMS_FILE = "{{ .Params.File }}";
+const PARAM_MODE = "{{ .Params.Mode }}";
+const PARAM_STRATEGY = "{{ .Params.Strategy }}";
+const PARAM_USER_KEY = "{{ .Params.UserKey }}";
+
+const AUTH_TYPE = "{{ .Users.Auth.Type }}";
+const AUTH_METHOD = "{{ .Users.Auth.Request.Method }}";
+const AUTH_URL = "{{ .Users.Auth.Request.URL }}";
+const AUTH_EXTRACT_TYPE = "{{ .Users.Auth.Extract.Type }}";
+const AUTH_EXTRACT_NAME = "{{ .Users.Auth.Extract.Name }}";
+const AUTH_APPLY_TYPE = "{{ .Users.Auth.Apply.Type }}";
+const AUTH_APPLY_NAME = "{{ .Users.Auth.Apply.Name }}";
+
+const users = new SharedArray("users", function () {
+  if (!USERS_FILE) {
+    return [];
+  }
+
+  const text = open(USERS_FILE);
+  return parseCsv(text);
+});
+
+const paramsData = PARAMS_FILE ? JSON.parse(open(PARAMS_FILE)) : {};
+
+const actions = [
+{{- range .Actions }}
+  {
+    id: "{{ .ID }}",
+    name: "{{ .Name }}",
+    method: "{{ .MethodLower }}",
+    path: "{{ .Path }}",
+    weight: {{ .Weight }},
+    headers: {
+    {{- range $k, $v := .Headers }}
+      "{{ $k }}": "{{ $v }}",
+    {{- end }}
+    },
+    body: {{ toJSON .Body }},
+    query: {
+    {{- range $k, $v := .Query }}
+      "{{ $k }}": "{{ $v }}",
+    {{- end }}
+    },
+  },
+{{- end }}
+];
+
+
+export default function () {
+  const user = pickUser();
+  const param = pickParam(user);
+  const context = { ...user, ...param, iter: __ITER, vu: __VU };
+
+  const cookieHeader = loginIfNeeded(user);
+
+  if (FLOW === "weighted") {
+    const action = pickWeighted(actions);
+    runAction(action, context, cookieHeader);
+    return;
+  }
+
+  // sequential
+  for (const action of actions) {
+    runAction(action, context, cookieHeader);
+  }
+}
+
+function runAction(action, context, cookieHeader) {
+  const path = renderTemplate(action.path, context);
+
+  const queryObj = renderObject(action.query, context);
+  const queryString = Object.keys(queryObj).length
+    ? "?" + Object.entries(queryObj)
+        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+        .join("&")
+    : "";
+
+  const url = `${BASE_URL}${path}${queryString}`;
+
+  const headers = {
+    ...renderObject(action.headers, context),
+    ...(cookieHeader || {}),
+  };
+
+  const body = action.body ? JSON.stringify(renderObject(action.body, context)) : null;
+  const res = http.request(action.method, url, body, { headers });
+
+  check(res, {
+    [`${action.name} status is 2xx`]: (r) => r.status >= 200 && r.status < 300,
+  });
+
+  sleep(1);
+}
+
+function pickWeighted(items) {
+  const total = items.reduce((sum, item) => sum + (item.weight || 1), 0);
+  let rand = Math.random() * total;
+
+  for (const item of items) {
+    rand -= item.weight || 1;
+    if (rand <= 0) {
+      return item;
+    }
+  }
+
+  return items[items.length - 1];
+}
+
+function pickUser() {
+  if (!users.length) {
+    return {};
+  }
+
+  if (USER_ASSIGN === "random") {
+    return users[Math.floor(Math.random() * users.length)];
+  }
+
+  return users[(__VU - 1) % users.length];
+}
+
+function loginIfNeeded(user) {
+  if (AUTH_TYPE !== "login") {
+    return {};
+  }
+
+  const loginBody = renderObject(
+    {
+{{- range $k, $v := .Users.Auth.Request.Body }}
+      "{{ $k }}": "{{ $v }}",
+{{- end }}
+    },
+    user
+  );
+
+  const loginRes = http.request(
+    AUTH_METHOD || "POST",
+    `${BASE_URL}${AUTH_URL}`,
+    JSON.stringify(loginBody),
+    {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  check(loginRes, {
+    "login success": (r) => r.status >= 200 && r.status < 300,
+  });
+
+  if (AUTH_EXTRACT_TYPE !== "cookie" || AUTH_APPLY_TYPE !== "cookie") {
+    return {};
+  }
+
+  const cookieName = AUTH_EXTRACT_NAME || AUTH_APPLY_NAME;
+  const cookie = loginRes.cookies[cookieName];
+
+  if (!cookie || !cookie.length) {
+    throw new Error(`cookie extraction failed: ${cookieName}`);
+  }
+
+  const cookieValue = cookie[0].value;
+  const applyName = AUTH_APPLY_NAME || cookieName;
+
+  return {
+    Cookie: `${applyName}=${cookieValue}`,
+  };
+}
+
+function pickParam(user) {
+  if (PARAM_MODE === "per_user") {
+    const userId = String(user[PARAM_USER_KEY || USER_KEY || "userId"]);
+    const rows = paramsData.users && paramsData.users[userId] ? paramsData.users[userId] : [];
+
+    if (!rows.length) {
+      return {};
+    }
+
+    if (PARAM_STRATEGY === "round_robin") {
+      return rows[__ITER % rows.length];
+    }
+
+    return rows[Math.floor(Math.random() * rows.length)];
+  }
+
+  const rows = paramsData.rows || [];
+
+  if (!rows.length) {
+    return {};
+  }
+
+  if (PARAM_STRATEGY === "round_robin") {
+    return rows[__ITER % rows.length];
+  }
+
+  return rows[Math.floor(Math.random() * rows.length)];
+}
+
+function renderTemplate(template, data) {
+  return template.replace(/{{ "{{" }}\s*([\w.]+)\s*{{ "}}" }}/g, function (_, key) {
+    const value = getByPath(data, key);
+    return value === undefined || value === null ? "" : String(value);
+  });
+}
+
+function renderObject(obj, data) {
+  if (!obj) {
+    return obj;
+  }
+
+  if (typeof obj === "string") {
+    return renderTemplate(obj, data);
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map((value) => renderObject(value, data));
+  }
+
+  if (typeof obj === "object") {
+    const result = {};
+    for (const key in obj) {
+      result[key] = renderObject(obj[key], data);
+    }
+    return result;
+  }
+
+  return obj;
+}
+
+function getByPath(obj, path) {
+  if (!path) {
+    return undefined;
+  }
+
+  return path.split(".").reduce((current, key) => {
+    if (current === undefined || current === null) {
+      return undefined;
+    }
+    return current[key];
+  }, obj);
+}
+
+function parseCsv(text) {
+  const lines = text.trim().split(/\r?\n/);
+
+  if (!lines.length) {
+    return [];
+  }
+
+  const headers = lines[0].split(",").map((h) => h.trim());
+
+  return lines.slice(1).map((line) => {
+    const values = line.split(",").map((v) => v.trim());
+    const row = {};
+
+    headers.forEach((header, index) => {
+      row[header] = values[index];
+    });
+
+    return row;
+  });
+}

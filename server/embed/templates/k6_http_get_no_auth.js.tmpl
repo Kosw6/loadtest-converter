@@ -1,0 +1,139 @@
+import http from "k6/http";
+import { check, sleep } from "k6";
+
+{{- if index .Extra "total_requests" }}
+export const options = {
+  scenarios: {
+    default: {
+      executor: "shared-iterations",
+      vus: {{ .VUs }},
+      iterations: {{ index .Extra "total_requests" }},
+      maxDuration: "{{ .Duration }}",
+    },
+  },
+};
+{{- else if .RPS }}
+export const options = {
+  scenarios: {
+    default: {
+      executor: "constant-arrival-rate",
+      rate: {{ .RPS }},
+      timeUnit: "1s",
+      duration: "{{ .Duration }}",
+      preAllocatedVUs: {{ .VUs }},
+    },
+  },
+};
+{{- else }}
+export const options = {
+  vus: {{ .VUs }},
+  duration: "{{ .Duration }}",
+};
+{{- end }}
+
+const BASE_URL = "{{ .BaseURL }}";
+const FLOW = "{{ .Flow }}";
+
+const actions = [
+{{- range .Actions }}
+  {
+    id: "{{ .ID }}",
+    name: "{{ .Name }}",
+    method: "{{ .MethodLower }}",
+    path: "{{ .Path }}",
+    weight: {{ .Weight }},
+    headers: {
+    {{- range $k, $v := .Headers }}
+      "{{ $k }}": "{{ $v }}",
+    {{- end }}
+    },
+    query: {
+    {{- range $k, $v := .Query }}
+      "{{ $k }}": "{{ $v }}",
+    {{- end }}
+    },
+    body: {{ toJSON .Body }},
+  },
+{{- end }}
+];
+
+export default function () {
+  const context = { iter: __ITER, vu: __VU };
+
+  if (FLOW === "weighted") {
+    const action = pickWeighted(actions);
+    runAction(action, context);
+    return;
+  }
+
+  // sequential
+  for (const action of actions) {
+    runAction(action, context);
+  }
+}
+
+function runAction(action, context) {
+  const path = renderTemplate(action.path, context);
+
+  const queryObj = renderObject(action.query, context);
+  const queryString = Object.keys(queryObj).length
+    ? "?" + Object.entries(queryObj)
+        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+        .join("&")
+    : "";
+
+  const url = `${BASE_URL}${path}${queryString}`;
+  const headers = renderObject(action.headers, context);
+  const body = action.body ? JSON.stringify(renderObject(action.body, context)) : null;
+
+  const res = http.request(action.method, url, body, { headers });
+
+  check(res, {
+    [`${action.name} status is 2xx`]: (r) => r.status >= 200 && r.status < 300,
+  });
+
+  sleep(1);
+}
+
+function pickWeighted(items) {
+  const total = items.reduce((sum, item) => sum + (item.weight || 1), 0);
+  let rand = Math.random() * total;
+
+  for (const item of items) {
+    rand -= item.weight || 1;
+    if (rand <= 0) {
+      return item;
+    }
+  }
+
+  return items[items.length - 1];
+}
+
+function renderTemplate(template, data) {
+  return template.replace(/\{\{\s*([\w.]+)\s*\}\}/g, function (_, key) {
+    const value = getByPath(data, key);
+    return value === undefined || value === null ? "" : String(value);
+  });
+}
+
+function renderObject(obj, data) {
+  if (!obj) return obj;
+  if (typeof obj === "string") return renderTemplate(obj, data);
+  if (Array.isArray(obj)) return obj.map((v) => renderObject(v, data));
+  if (typeof obj === "object") {
+    const result = {};
+    for (const key in obj) {
+      result[key] = renderObject(obj[key], data);
+    }
+    return result;
+  }
+  return obj;
+}
+
+function getByPath(obj, path) {
+  if (!path) return undefined;
+  return path.split(".").reduce((cur, key) => {
+    if (cur === undefined || cur === null) return undefined;
+    return cur[key];
+  }, obj);
+}
