@@ -27,9 +27,9 @@ func main() {
 
 	// 공개 변환 API — 모든 Origin 허용 (stateless, 민감 데이터 없음)
 	c := cors.New(cors.Options{
-		AllowAllOrigins: true,
-		AllowedMethods:  []string{"GET", "POST", "OPTIONS"},
-		AllowedHeaders:  []string{"Content-Type"},
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET", "POST", "OPTIONS"},
+		AllowedHeaders: []string{"Content-Type"},
 	})
 
 	handler := c.Handler(mux)
