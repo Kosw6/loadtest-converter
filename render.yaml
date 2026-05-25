@@ -17,8 +17,9 @@ services:
   # ── React UI — Static Site ─────────────────────────────────────────────
   - type: static
     name: loadtest-converter-ui
-    buildCommand: cd ui && npm ci && npm run build
-    staticPublishPath: ./ui/dist
+    rootDir: ui
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
     # SPA 라우팅 — 모든 경로를 index.html로 rewrite
     routes:
       - type: rewrite
