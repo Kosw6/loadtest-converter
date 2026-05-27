@@ -312,7 +312,8 @@ export default function FlowPage() {
           <MiniMap
             nodeColor={(n) => {
               if (n.type === "infraNode") return "#3fb950";
-              return n.data?.step?.type === "command" ? "#3fb950" : "#4c6ef5";
+              const colors = { k6: "#4c6ef5", command: "#3fb950", auth: "#e8a009", final_check: "#56b3c4", chaos: "#f85149" };
+              return colors[n.data?.step?.type] ?? "#4c6ef5";
             }}
             maskColor="rgba(13,17,23,0.7)"
           />
