@@ -12,7 +12,7 @@ const TEMPLATES = [
 
 // panelMode=true: 헤더/접기 없이 body만 렌더 (NodeEditPanel에서 사용)
 // tourPrefix: 첫 번째 StepCard에만 전달되는 투어 ID 접두사 (e.g. "tour-step-0")
-export default function StepCard({ step, allStepIds, onChange, onRemove, panelMode = false, tourPrefix }) {
+export default function StepCard({ step, allStepIds, infraNodes = [], onChange, onRemove, panelMode = false, tourPrefix }) {
   const [open, setOpen] = useState(true);
 
   const set = (key, val) => onChange({ ...step, [key]: val });
@@ -104,6 +104,7 @@ export default function StepCard({ step, allStepIds, onChange, onRemove, panelMo
           <option value="auth">auth (사전 로그인)</option>
           <option value="final_check">final_check (상태 검증)</option>
           <option value="command">command</option>
+          <option value="chaos">chaos (컨테이너 제어)</option>
         </select>
       </div>
 
@@ -126,6 +127,48 @@ export default function StepCard({ step, allStepIds, onChange, onRemove, panelMo
             ))}
           </div>
         </div>
+      )}
+
+      {/* Chaos */}
+      {step.type === "chaos" && (
+        <>
+          <div className="section-divider">Chaos 설정</div>
+          <p className="hint">Docker Compose 컨테이너를 제어합니다. 인프라 세팅에서 노드를 먼저 등록하세요.</p>
+          <div className="form-row">
+            <label>
+              Target
+              <Tooltip text={"제어할 컨테이너의 논리 이름.\n인프라 세팅에서 등록한 노드 id를 선택합니다."} />
+            </label>
+            {infraNodes.length > 0 ? (
+              <select value={step.target || ""} onChange={(e) => set("target", e.target.value)}>
+                <option value="">선택하세요</option>
+                {infraNodes.map((n) => (
+                  <option key={n.id} value={n.id}>
+                    {n.id} ({n.container})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                value={step.target || ""}
+                onChange={(e) => set("target", e.target.value)}
+                placeholder="노드 id (인프라 세팅에서 등록)"
+              />
+            )}
+          </div>
+          <div className="form-row">
+            <label>
+              Action
+              <Tooltip text={"stop: 컨테이너 중지\nstart: 컨테이너 시작\nrestart: 컨테이너 재시작\nwait_healthy: docker inspect health가 healthy 될 때까지 대기"} />
+            </label>
+            <select value={step.action || "stop"} onChange={(e) => set("action", e.target.value)}>
+              <option value="stop">stop — 컨테이너 중지</option>
+              <option value="start">start — 컨테이너 시작</option>
+              <option value="restart">restart — 컨테이너 재시작</option>
+              <option value="wait_healthy">wait_healthy — healthy 대기</option>
+            </select>
+          </div>
+        </>
       )}
 
       {/* Command */}

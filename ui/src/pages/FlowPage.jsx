@@ -90,7 +90,7 @@ function toEdges(steps) {
 
 // ── FlowPage ──────────────────────────────────────────────────────────────────
 export default function FlowPage() {
-  const { steps, addStep, updateStepById, removeStepById, addDependency, removeDependency } =
+  const { steps, infra, addStep, updateStepById, removeStepById, addDependency, removeDependency } =
     useScenario();
 
   const allStepIds = steps.map((s) => s.id);
@@ -315,6 +315,7 @@ export default function FlowPage() {
         <NodeEditPanel
           step={selectedStep}
           allStepIds={allStepIds}
+          infraNodes={infra?.nodes || []}
           onChange={handleStepChange}
           onRemove={() => selectedId && handleRemove(selectedId)}
           onClose={() => setSelectedId(null)}

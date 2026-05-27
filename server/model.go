@@ -4,7 +4,20 @@ package main
 
 type ConvertRequest struct {
 	Meta  MetaConfig  `json:"meta"`
+	Infra InfraInput  `json:"infra"`
 	Steps []StepInput `json:"steps"`
+}
+
+type InfraInput struct {
+	Type    string           `json:"type"`    // docker-compose
+	File    string           `json:"file"`    // docker-compose.yml 경로
+	EnvFile string           `json:"envFile"` // .env.runtime 경로 (선택)
+	Nodes   []InfraNodeInput `json:"nodes"`
+}
+
+type InfraNodeInput struct {
+	ID        string `json:"id"`
+	Container string `json:"container"`
 }
 
 type MetaConfig struct {
@@ -38,8 +51,10 @@ type StepInput struct {
 	UsersData []UserRow       `json:"usersData"`  // 이 step에서 쓸 user 행 데이터
 	Params    ParamsStepInput `json:"params"`
 	ParamsData *ParamsInput   `json:"paramsData"` // 이 step에서 쓸 params 데이터
-	Command   string          `json:"command"`
-	Checks    []FinalCheckInput `json:"checks"` // final_check step 전용
+	Command   string            `json:"command"`
+	Checks    []FinalCheckInput `json:"checks"`  // final_check step 전용
+	Target    string            `json:"target"`  // chaos step: infra node id
+	Action    string            `json:"action"`  // chaos step: stop|start|restart|wait_healthy
 }
 
 type ActionInput struct {

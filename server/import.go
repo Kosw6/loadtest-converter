@@ -18,6 +18,15 @@ type yamlScenario struct {
 		Name        string `yaml:"name"`
 		Description string `yaml:"description"`
 	} `yaml:"meta"`
+	Infra struct {
+		Type    string `yaml:"type"`
+		File    string `yaml:"file"`
+		EnvFile string `yaml:"env_file"`
+		Nodes   []struct {
+			ID        string `yaml:"id"`
+			Container string `yaml:"container"`
+		} `yaml:"nodes"`
+	} `yaml:"infra"`
 	Steps []yamlStep `yaml:"steps"`
 }
 
@@ -39,6 +48,8 @@ type yamlStep struct {
 	Actions   []yamlAction      `yaml:"actions"`
 	Endpoints []yamlEndpoint    `yaml:"endpoints"` // 구버전 호환
 	Checks    []yamlCheck       `yaml:"checks"`
+	Target    string            `yaml:"target"`
+	Action    string            `yaml:"action"`
 }
 
 // yamlEndpoint는 구버전 scenario.yml의 endpoints 필드 (actions로 변환)
@@ -149,6 +160,18 @@ func ImportScenario(yamlStr string) (ConvertRequest, error) {
 			Name:        metaName,
 			Description: metaDesc,
 		},
+		Infra: InfraInput{
+			Type:    doc.Infra.Type,
+			File:    doc.Infra.File,
+			EnvFile: doc.Infra.EnvFile,
+		},
+	}
+
+	for _, n := range doc.Infra.Nodes {
+		req.Infra.Nodes = append(req.Infra.Nodes, InfraNodeInput{
+			ID:        n.ID,
+			Container: n.Container,
+		})
 	}
 
 	for _, s := range doc.Steps {
@@ -204,6 +227,8 @@ func convertYAMLStep(s yamlStep) StepInput {
 		Type:          s.Type,
 		DependsOn:     s.DependsOn,
 		Command:       s.Command,
+		Target:        s.Target,
+		Action:        s.Action,
 		BaseURL:       s.BaseURL,
 		Flow:          flow,
 		Template:      reverseTemplatePath(s.Template),

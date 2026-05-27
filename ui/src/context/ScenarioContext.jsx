@@ -2,11 +2,10 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 
 const LS_KEY = "lc_scenario";
 
-function saveToLS(meta, steps) {
+function saveToLS(meta, infra, steps) {
   try {
-    // File 객체 등 직렬화 불가 필드 제외
     const sanitized = steps.map((s) => ({ ...s, paramsData: null, usersData: [] }));
-    localStorage.setItem(LS_KEY, JSON.stringify({ meta, steps: sanitized }));
+    localStorage.setItem(LS_KEY, JSON.stringify({ meta, infra, steps: sanitized }));
   } catch (_) {}
 }
 
@@ -19,6 +18,8 @@ function loadFromLS() {
     return null;
   }
 }
+
+const DEFAULT_INFRA = { type: "docker-compose", file: "", envFile: "", nodes: [] };
 
 export function newStep(length = 0) {
   return {
@@ -43,6 +44,8 @@ export function newStep(length = 0) {
     paramsData: null,
     command: "",
     checks: [],       // final_check step 전용
+    target: "",       // chaos step 전용
+    action: "stop",   // chaos step 전용
   };
 }
 
@@ -60,12 +63,12 @@ const ScenarioContext = createContext(null);
 export function ScenarioProvider({ children }) {
   const saved = loadFromLS();
   const [meta, setMeta] = useState(saved?.meta ?? { name: "", description: "" });
+  const [infra, setInfra] = useState(saved?.infra ?? DEFAULT_INFRA);
   const [steps, setSteps] = useState(saved?.steps ?? [newStep(0)]);
 
-  // meta/steps 변경 시 localStorage에 자동 저장
   useEffect(() => {
-    saveToLS(meta, steps);
-  }, [meta, steps]);
+    saveToLS(meta, infra, steps);
+  }, [meta, infra, steps]);
 
   const addStep = useCallback((step) => {
     setSteps((prev) => [...prev, step || newStep(prev.length)]);
@@ -138,6 +141,7 @@ export function ScenarioProvider({ children }) {
     <ScenarioContext.Provider
       value={{
         meta, setMeta,
+        infra, setInfra,
         steps, setSteps,
         addStep, updateStep, updateStepById,
         removeStep, removeStepById,

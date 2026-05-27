@@ -10,7 +10,7 @@ import { useTour } from "./hooks/useTour.js";
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { meta, steps, setMeta, setSteps } = useScenario();
+  const { meta, infra, steps, setMeta, setInfra, setSteps } = useScenario();
 
   const [yaml, setYaml] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -46,7 +46,7 @@ export default function App() {
       setPreviewLoading(true);
       setPreviewError("");
       try {
-        const res = await previewScenario({ meta, steps });
+        const res = await previewScenario({ meta, infra, steps });
         setYaml(res.yaml);
         setPreviewOpen(true);
       } catch (e) {
@@ -61,7 +61,7 @@ export default function App() {
     withValidation(async () => {
       setExportLoading(true);
       try {
-        await exportScenario({ meta, steps });
+        await exportScenario({ meta, infra, steps });
       } catch (e) {
         alert("Export 실패: " + e.message);
       } finally {
@@ -72,6 +72,7 @@ export default function App() {
   // YAML import 완료 → 시나리오 덮어쓰기
   const handleImportDone = (req) => {
     setMeta(req.meta || { name: "", description: "" });
+    setInfra(req.infra || { type: "docker-compose", file: "", envFile: "", nodes: [] });
     setSteps(req.steps || []);
   };
 

@@ -32,10 +32,39 @@ func buildScenarioDoc(req ConvertRequest) map[string]any {
 		steps = append(steps, step)
 	}
 
-	return map[string]any{
+	doc := map[string]any{
 		"meta":  meta,
 		"steps": steps,
 	}
+
+	if req.Infra.Type != "" || len(req.Infra.Nodes) > 0 {
+		doc["infra"] = buildInfraBlock(req.Infra)
+	}
+
+	return doc
+}
+
+func buildInfraBlock(infra InfraInput) map[string]any {
+	block := map[string]any{
+		"type": infra.Type,
+	}
+	if infra.File != "" {
+		block["file"] = infra.File
+	}
+	if infra.EnvFile != "" {
+		block["env_file"] = infra.EnvFile
+	}
+	if len(infra.Nodes) > 0 {
+		var nodes []map[string]any
+		for _, n := range infra.Nodes {
+			nodes = append(nodes, map[string]any{
+				"id":        n.ID,
+				"container": n.Container,
+			})
+		}
+		block["nodes"] = nodes
+	}
+	return block
 }
 
 func buildStep(s StepInput) map[string]any {
@@ -52,6 +81,11 @@ func buildStep(s StepInput) map[string]any {
 	switch s.Type {
 	case "command":
 		step["command"] = s.Command
+		return step
+
+	case "chaos":
+		step["target"] = s.Target
+		step["action"] = s.Action
 		return step
 
 	case "auth":

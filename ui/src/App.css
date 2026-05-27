@@ -1537,3 +1537,80 @@ a.tutorial-card {
     0 0 20px rgba(56, 139, 253, 0.18) !important;
   border-radius: 6px;
 }
+
+
+/* ─── Steps Header ───────────────────────────────────────────────────────────── */
+.steps-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.steps-header h2 { margin: 0; }
+.steps-header-actions { display: flex; gap: 8px; align-items: center; }
+
+/* ─── Infra Button ───────────────────────────────────────────────────────────── */
+.btn-infra {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg-sub); color: var(--text-muted);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 6px 12px; font-size: 13px; cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-infra:hover { border-color: var(--accent); color: var(--text); }
+.btn-infra--active { border-color: #3fb950; color: #3fb950; }
+.btn-infra--active:hover { border-color: #56d364; }
+
+.infra-badge {
+  background: #3fb950; color: #0d1117;
+  border-radius: 10px; padding: 1px 7px;
+  font-size: 11px; font-weight: 700;
+}
+
+/* ─── Modal ──────────────────────────────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+}
+.modal-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 560px; max-height: 80vh;
+  display: flex; flex-direction: column;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-title { font-size: 15px; font-weight: 700; }
+.modal-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+.modal-footer {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+}
+
+/* ─── Infra Panel ────────────────────────────────────────────────────────────── */
+.infra-section { display: flex; flex-direction: column; gap: 10px; }
+.infra-section-title {
+  font-size: 12px; font-weight: 700; text-transform: uppercase;
+  color: var(--text-muted); letter-spacing: 0.05em;
+  display: flex; align-items: center; gap: 8px;
+}
+.infra-hint { font-size: 11px; font-weight: 400; text-transform: none; color: var(--text-muted); }
+
+.infra-node-row {
+  display: flex; align-items: center; gap: 8px;
+}
+.infra-node-id { flex: 1; }
+.infra-node-container { flex: 1.5; }
+.infra-node-arrow { color: var(--text-muted); flex-shrink: 0; }
+.infra-add-node { align-self: flex-start; }
+
+.infra-preview {
+  background: var(--bg-sub); border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px; font-size: 12px;
+  color: var(--text-muted); white-space: pre; overflow-x: auto;
+  margin: 0;
+}
+.optional { font-size: 11px; color: var(--text-muted); font-weight: 400; }
