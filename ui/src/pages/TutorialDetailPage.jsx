@@ -130,6 +130,52 @@ steps:
             "$.data.successCount": "10"
 `.trim(),
 
+  "auction-lost-update": `
+name: 경매 입찰 — 동시성 미보호 (Lost Update)
+steps:
+  - id: reset
+    name: 경매 초기화 (시작가 10,000원)
+    type: k6
+    template: templates/k6_http_get_no_auth.js.tmpl
+    flow: sequential
+    base_url: http://localhost:8080
+    vus: 1
+    duration: 5s
+    extra:
+      total_requests: 1
+    actions:
+      - id: reset-auction
+        method: POST
+        path: /auction/1/reset
+  - id: burst-bid
+    name: "[나쁜] 동시 입찰 30건 (락 없음)"
+    type: k6
+    template: templates/k6_http_get_no_auth.js.tmpl
+    flow: sequential
+    base_url: http://localhost:8080
+    vus: 30
+    duration: 10s
+    extra:
+      total_requests: 30
+    actions:
+      - id: bid-unsafe
+        method: POST
+        path: /auction/1/bid-unsafe
+  - id: verify
+    name: 결과 검증
+    type: final_check
+    depends_on: [burst-bid]
+    base_url: http://localhost:8080
+    checks:
+      - id: check-current-bid
+        method: GET
+        path: /auction/1
+        assert:
+          status: 200
+          json:
+            "$.data.currentBid": "40000"
+`.trim(),
+
   "wallet-lost-update": `
 name: 잔액 충전 — 동시성 미보호 (Lost Update)
 steps:
@@ -176,6 +222,52 @@ steps:
           status: 200
           json:
             "$.data.balance": "40000"
+`.trim(),
+
+  "auction-pessimistic": `
+name: 경매 입찰 — 비관적 락 (Pessimistic Lock)
+steps:
+  - id: reset
+    name: 경매 초기화 (시작가 10,000원)
+    type: k6
+    template: templates/k6_http_get_no_auth.js.tmpl
+    flow: sequential
+    base_url: http://localhost:8080
+    vus: 1
+    duration: 5s
+    extra:
+      total_requests: 1
+    actions:
+      - id: reset-auction
+        method: POST
+        path: /auction/1/reset
+  - id: burst-bid
+    name: "[좋은] 동시 입찰 30건 (비관적 락)"
+    type: k6
+    template: templates/k6_http_get_no_auth.js.tmpl
+    flow: sequential
+    base_url: http://localhost:8080
+    vus: 30
+    duration: 10s
+    extra:
+      total_requests: 30
+    actions:
+      - id: bid-pessimistic
+        method: POST
+        path: /auction/1/bid-pessimistic
+  - id: verify
+    name: 결과 검증
+    type: final_check
+    depends_on: [burst-bid]
+    base_url: http://localhost:8080
+    checks:
+      - id: check-current-bid
+        method: GET
+        path: /auction/1
+        assert:
+          status: 200
+          json:
+            "$.data.currentBid": "40000"
 `.trim(),
 
   "wallet-pessimistic": `
@@ -881,44 +973,44 @@ function StockConcurrencyContent() {
 }
 
 /* ── 잔액 Lost Update ───────────────────────────────────────────────────── */
-function WalletLostUpdateContent() {
+function AuctionLostUpdateContent() {
   return (
     <div className="td-sections">
       <Section num="01" title="무슨 문제인가?">
-        <h2 className="td-section-title">Lost Update — 충전금이 사라집니다</h2>
+        <h2 className="td-section-title">Lost Update — 입찰가가 사라집니다</h2>
         <p className="td-text">
-          잔액 충전 시 <strong>락 없이</strong> read-modify-write 하면 여러 트랜잭션이
-          동시에 같은 잔액을 읽고 덮어씁니다. 일부 충전이 유실(Lost Update)되어
-          <em>최종 잔액이 기대보다 낮아집니다.</em>
+          경매 입찰 시 <strong>락 없이</strong> read-modify-write 하면 여러 트랜잭션이
+          동시에 같은 현재가를 읽고 덮어씁니다. 대부분의 입찰이 유실(Lost Update)되어
+          <em>최종 입찰가가 기대보다 훨씬 낮아집니다.</em>
         </p>
         <InfoBox rows={[
-          ["초기 잔액", "10,000원"],
-          ["충전 단위", "1,000원 × 30회"],
-          ["기대 잔액", "40,000원"],
-          ["실제 결과", "40,000원 미만 (일부 충전 유실)"],
+          ["경매 시작가", "10,000원"],
+          ["입찰 단위", "1,000원 × 30명 동시"],
+          ["기대 최종가", "40,000원"],
+          ["실제 결과", "~11,000원 (29번의 입찰 소실)"],
         ]} />
       </Section>
 
       <Section num="02" title="시나리오 구조">
-        <h2 className="td-section-title">초기화 → Burst 30 → 잔액 검증</h2>
+        <h2 className="td-section-title">초기화 → Burst 30 → 최종 입찰가 검증</h2>
         <StepVisual steps={[
-          { label: "reset", name: "지갑 초기화", fields: [["path", "/wallet/1/reset"], ["mode", "total_requests=1"]] },
-          { label: "burst", name: "동시 충전 30건", variant: "bad", fields: [["path", "/wallet/1/deposit-unsafe"], ["amount", "1000"], ["vus", "30"]] },
-          { label: "check", name: "잔액 검증", fields: [["balance", "=40000?"]] },
+          { label: "reset", name: "경매 초기화", fields: [["path", "/auction/1/reset"], ["mode", "total_requests=1"]] },
+          { label: "burst", name: "동시 입찰 30건", variant: "bad", fields: [["path", "/auction/1/bid-unsafe"], ["vus", "30"]] },
+          { label: "check", name: "최종 입찰가 검증", fields: [["currentBid", "=40000?"]] },
         ]} />
         <div className="td-infobox" style={{ marginTop: 12 }}>
           <div className="td-infobox-row">
             <span className="td-infobox-key">해결 버전</span>
-            <span className="td-infobox-val"><code>/wallet/1/deposit-pessimistic</code> — SELECT FOR UPDATE</span>
+            <span className="td-infobox-val"><code>/auction/1/bid-pessimistic</code> — SELECT FOR UPDATE</span>
           </div>
         </div>
       </Section>
 
       <Section num="03" title="결과 해석">
-        <h2 className="td-section-title">final_check의 balance 값으로 유실 확인</h2>
+        <h2 className="td-section-title">final_check의 currentBid 값으로 유실 확인</h2>
         <ResultBox
-          bad={{ label: "unsafe (락 없음)", metrics: [["balance", "< 40000"], ["check", "FAIL"]] }}
-          good={{ label: "pessimistic (비관적 락)", metrics: [["balance", "= 40000"], ["check", "PASS"]] }}
+          bad={{ label: "unsafe (락 없음)", metrics: [["currentBid", "< 40000"], ["check", "FAIL"]] }}
+          good={{ label: "pessimistic (비관적 락)", metrics: [["currentBid", "= 40000"], ["check", "PASS"]] }}
         />
       </Section>
     </div>
@@ -1353,13 +1445,13 @@ const TUTORIALS = {
     altLabel: "✅ 락 버전 불러오기",
     content: <StockConcurrencyContent />,
   },
-  "wallet-lost-update": {
-    emoji: "💰", title: "잔액 충전 — Lost Update", subtitle: "동시성 제어",
-    difficulty: "medium", tags: ["동시성", "Lost Update", "트랜잭션"],
-    yamlKey: "wallet-lost-update",
-    altYamlKey: "wallet-pessimistic",
+  "auction-lost-update": {
+    emoji: "🔨", title: "경매 입찰 — Lost Update", subtitle: "동시성 제어",
+    difficulty: "medium", tags: ["동시성", "Lost Update", "비관적 락"],
+    yamlKey: "auction-lost-update",
+    altYamlKey: "auction-pessimistic",
     altLabel: "✅ 락 버전 불러오기",
-    content: <WalletLostUpdateContent />,
+    content: <AuctionLostUpdateContent />,
   },
   "wallet-multiuser": {
     emoji: "👥", title: "다중 사용자 독립 지갑 충전", subtitle: "동시성 제어",

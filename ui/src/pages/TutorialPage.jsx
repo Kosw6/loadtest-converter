@@ -77,15 +77,15 @@ const TUTORIALS = [
     scenario: "stock-unsafe.yml / stock-lock.yml",
   },
   {
-    id: "wallet-lost-update",
-    emoji: "💰",
-    title: "잔액 충전 — Lost Update",
+    id: "auction-lost-update",
+    emoji: "🔨",
+    title: "경매 입찰 — Lost Update",
     subtitle: "동시성 제어",
     description:
-      "여러 VU가 동시에 잔액을 충전할 때 락 없이 read-modify-write하면 일부 업데이트가 유실됩니다. 비관적 락으로 정확한 합산을 보장합니다.",
-    tags: ["동시성", "Lost Update", "트랜잭션"],
+      "30명이 동시에 입찰할 때 락 없이 read-modify-write하면 대부분의 입찰이 유실됩니다. 비관적 락으로 모든 입찰이 정확히 반영됨을 확인합니다.",
+    tags: ["동시성", "Lost Update", "비관적 락"],
     difficulty: "medium",
-    scenario: "wallet-unsafe.yml / wallet-pessimistic.yml",
+    scenario: "auction-unsafe.yml / auction-pessimistic.yml",
   },
   {
     id: "wallet-multiuser",
@@ -352,7 +352,7 @@ const DOMAIN_COLOR = {
 const READY_IDS = new Set([
   "n-plus-one",
   "stock-concurrency",
-  "wallet-lost-update",
+  "auction-lost-update",
   "wallet-multiuser",
   "payment-idempotency",
   "payment-params",
