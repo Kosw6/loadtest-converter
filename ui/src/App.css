@@ -215,8 +215,8 @@ body.resizing { user-select: none; cursor: col-resize; }
   background: var(--bg-card);
   border: 1.5px solid #3fb950;
   border-radius: 10px;
-  min-width: 180px;
-  max-width: 260px;
+  min-width: 200px;
+  max-width: 280px;
   box-shadow: 0 2px 12px rgba(63,185,80,0.15);
   overflow: hidden;
   font-size: 13px;
@@ -228,12 +228,10 @@ body.resizing { user-select: none; cursor: col-resize; }
   box-shadow: 0 0 0 2px rgba(63,185,80,0.35), 0 2px 12px rgba(63,185,80,0.25);
 }
 
-/* ── view mode ── */
-.infra-flow-view { padding: 0; }
-
+/* ── 헤더 ── */
 .infra-flow-header {
   display: flex; align-items: center; gap: 6px;
-  padding: 6px 10px;
+  padding: 6px 8px 6px 10px;
   background: rgba(63,185,80,0.1);
   border-bottom: 1px solid rgba(63,185,80,0.2);
 }
@@ -242,19 +240,43 @@ body.resizing { user-select: none; cursor: col-resize; }
   font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
   color: #3fb950; flex: 1;
 }
-.infra-flow-delete {
-  background: transparent; border: none; color: var(--text-muted);
-  font-size: 12px; cursor: pointer; padding: 1px 4px; border-radius: 4px;
-  line-height: 1;
-  transition: color 0.15s, background 0.15s;
+/* 헤더 우측 + 버튼 */
+.infra-flow-add-btn {
+  background: var(--bg-card);
+  border: 1px solid #3fb950;
+  color: #3fb950;
+  border-radius: 4px;
+  font-size: 15px; font-weight: 700; line-height: 1;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; padding: 0; flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
 }
-.infra-flow-delete:hover { color: var(--danger); background: rgba(248,81,73,0.12); }
+.infra-flow-add-btn:hover { background: rgba(63,185,80,0.18); color: #56d364; }
 
-.infra-flow-body {
-  padding: 8px 10px 10px;
-  cursor: pointer;
+/* ── 빈 상태 ── */
+.infra-flow-empty {
+  padding: 12px 10px;
+  font-size: 11px; color: var(--text-muted);
+  text-align: center; font-style: italic;
 }
-.infra-flow-body:hover { background: rgba(63,185,80,0.06); }
+
+/* ── 항목 구분선 ── */
+.infra-flow-divider {
+  height: 1px;
+  background: rgba(63,185,80,0.18);
+  margin: 0 8px;
+}
+
+/* ── 뷰 모드 항목 ── */
+.infra-flow-entry {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px 7px 10px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.infra-flow-entry:hover { background: rgba(63,185,80,0.06); }
+.infra-flow-entry-info { flex: 1; min-width: 0; }
 
 .infra-flow-id {
   font-weight: 700; font-size: 13px; color: var(--text);
@@ -266,12 +288,19 @@ body.resizing { user-select: none; cursor: col-resize; }
 }
 .infra-placeholder { color: var(--text-muted); font-style: italic; opacity: 0.6; }
 
-/* ── edit mode ── */
-.infra-flow-edit { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.infra-flow-delete {
+  background: transparent; border: none; color: var(--text-muted);
+  font-size: 12px; cursor: pointer; padding: 2px 5px; border-radius: 4px;
+  line-height: 1; flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+.infra-flow-delete:hover { color: var(--danger); background: rgba(248,81,73,0.12); }
 
-.infra-flow-edit-header { margin-bottom: 2px; }
-.infra-flow-edit-title { font-size: 12px; font-weight: 700; color: #3fb950; }
-
+/* ── 편집 모드 항목 ── */
+.infra-flow-edit-body {
+  padding: 8px 10px;
+  display: flex; flex-direction: column; gap: 7px;
+}
 .infra-flow-edit-row {
   display: flex; align-items: center; gap: 6px;
 }

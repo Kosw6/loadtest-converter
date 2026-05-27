@@ -85,27 +85,19 @@ function toEdges(steps) {
   );
 }
 
-// infra 노드 → RF 노드 (RF id = __infra__${idx})
-function toInfraRFNodes(infraNodes, existing = [], onUpdate, onRemove) {
-  return (infraNodes || []).map((node, idx) => {
-    const rfId = `__infra__${idx}`;
-    const prev = existing.find((n) => n.id === rfId);
-    return {
-      id: rfId,
-      type: "infraNode",
-      position: prev?.position ?? {
-        x: 700 + (idx % 3) * 240,
-        y: 40 + Math.floor(idx / 3) * 150,
-      },
-      data: {
-        node,
-        onUpdate: (updated) => onUpdate(idx, updated),
-        onRemove: () => onRemove(idx),
-      },
-      draggable: true,
-      selectable: true,
-    };
-  });
+// infra 노드 → 단일 패널 RF 노드 (RF id = __infra__panel)
+function toInfraRFNodes(infraNodes, existing = [], onAdd, onUpdate, onRemove) {
+  if (!infraNodes || infraNodes.length === 0) return [];
+  const rfId = "__infra__panel";
+  const prev = existing.find((n) => n.id === rfId);
+  return [{
+    id: rfId,
+    type: "infraNode",
+    position: prev?.position ?? { x: 700, y: 40 },
+    data: { nodes: infraNodes, onAdd, onUpdate, onRemove },
+    draggable: true,
+    selectable: true,
+  }];
 }
 
 // ── FlowPage ──────────────────────────────────────────────────────────────────
@@ -143,7 +135,7 @@ export default function FlowPage() {
   // ── RF 상태 초기화 ──────────────────────────────────────────────────────────
   const [nodes, setNodes, onNodesChange] = useNodesState(() => [
     ...toStepNodes(steps),
-    ...toInfraRFNodes(infra?.nodes || [], [], handleUpdateInfra, handleRemoveInfra),
+    ...toInfraRFNodes(infra?.nodes || [], [], handleAddInfra, handleUpdateInfra, handleRemoveInfra),
   ]);
   const [edges, setEdges, onEdgesChange] = useEdgesState(() => toEdges(steps));
   const [selectedId, setSelectedId] = useState(null);
@@ -167,11 +159,11 @@ export default function FlowPage() {
       const stepRF  = prev.filter((n) => n.type === "stepNode");
       const infraRF = prev.filter((n) => n.type === "infraNode");
       const newInfraNodes = toInfraRFNodes(
-        infra?.nodes || [], infraRF, handleUpdateInfra, handleRemoveInfra
+        infra?.nodes || [], infraRF, handleAddInfra, handleUpdateInfra, handleRemoveInfra
       );
       return [...stepRF, ...newInfraNodes];
     });
-  }, [infra, handleUpdateInfra, handleRemoveInfra]);
+  }, [infra, handleAddInfra, handleUpdateInfra, handleRemoveInfra]);
 
   // ── 연결 ────────────────────────────────────────────────────────────────────
   const onConnect = useCallback(
