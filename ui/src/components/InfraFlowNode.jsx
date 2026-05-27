@@ -5,6 +5,7 @@ export default function InfraFlowNode({ data, selected }) {
 
   const [editingIdx, setEditingIdx] = useState(null);
   const [editState, setEditState] = useState({ id: "", container: "" });
+  const [errors, setErrors] = useState({});
   const prevLenRef = useRef(nodes.length);
 
   // 새 항목이 추가되면 자동으로 편집 모드 진입
@@ -22,14 +23,26 @@ export default function InfraFlowNode({ data, selected }) {
   function startEdit(idx) {
     setEditingIdx(idx);
     setEditState({ id: nodes[idx].id, container: nodes[idx].container });
+    setErrors({});
   }
 
   function handleSave(idx) {
-    onUpdate(idx, { id: editState.id.trim(), container: editState.container.trim() });
+    const id = editState.id.trim();
+    const container = editState.container.trim();
+    const newErrors = {};
+    if (!id)        newErrors.id = "ID는 필수입니다";
+    if (!container) newErrors.container = "컨테이너 명은 필수입니다";
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
+    onUpdate(idx, { id, container });
     setEditingIdx(null);
   }
 
   function handleCancel(idx) {
+    setErrors({});
     // 빈 상태로 취소 시 해당 항목 제거
     if (!nodes[idx]?.id && !nodes[idx]?.container) {
       onRemove(idx);
@@ -71,25 +84,35 @@ export default function InfraFlowNode({ data, selected }) {
             /* 편집 모드 */
             <div className="infra-flow-edit-body">
               <div className="infra-flow-edit-row">
-                <span className="infra-flow-edit-label">ID</span>
-                <input
-                  className="infra-flow-input nodrag nopan"
-                  value={editState.id}
-                  onChange={(e) => setEditState((s) => ({ ...s, id: e.target.value }))}
-                  onKeyDown={(e) => handleKeyDown(e, idx)}
-                  placeholder="redis, db, app-1"
-                  autoFocus
-                />
+                <span className="infra-flow-edit-label">
+                  ID <span className="infra-required">*</span>
+                </span>
+                <div className="infra-flow-input-wrap">
+                  <input
+                    className={"infra-flow-input nodrag nopan" + (errors.id ? " infra-flow-input--error" : "")}
+                    value={editState.id}
+                    onChange={(e) => { setEditState((s) => ({ ...s, id: e.target.value })); setErrors((er) => ({ ...er, id: undefined })); }}
+                    onKeyDown={(e) => handleKeyDown(e, idx)}
+                    placeholder="redis, db, app-1"
+                    autoFocus
+                  />
+                  {errors.id && <span className="infra-error-msg">{errors.id}</span>}
+                </div>
               </div>
               <div className="infra-flow-edit-row">
-                <span className="infra-flow-edit-label">컨테이너</span>
-                <input
-                  className="infra-flow-input nodrag nopan"
-                  value={editState.container}
-                  onChange={(e) => setEditState((s) => ({ ...s, container: e.target.value }))}
-                  onKeyDown={(e) => handleKeyDown(e, idx)}
-                  placeholder="컨테이너 이름"
-                />
+                <span className="infra-flow-edit-label">
+                  컨테이너 <span className="infra-required">*</span>
+                </span>
+                <div className="infra-flow-input-wrap">
+                  <input
+                    className={"infra-flow-input nodrag nopan" + (errors.container ? " infra-flow-input--error" : "")}
+                    value={editState.container}
+                    onChange={(e) => { setEditState((s) => ({ ...s, container: e.target.value })); setErrors((er) => ({ ...er, container: undefined })); }}
+                    onKeyDown={(e) => handleKeyDown(e, idx)}
+                    placeholder="컨테이너 이름"
+                  />
+                  {errors.container && <span className="infra-error-msg">{errors.container}</span>}
+                </div>
               </div>
               <div className="infra-flow-edit-btns">
                 <button className="infra-btn-save nodrag" onClick={() => handleSave(idx)}>저장</button>
