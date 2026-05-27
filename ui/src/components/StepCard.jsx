@@ -139,21 +139,25 @@ export default function StepCard({ step, allStepIds, infraNodes = [], onChange, 
               Target
               <Tooltip text={"제어할 컨테이너의 논리 이름.\n인프라 세팅에서 등록한 노드 id를 선택합니다."} />
             </label>
-            {infraNodes.length > 0 ? (
-              <select value={step.target || ""} onChange={(e) => set("target", e.target.value)}>
-                <option value="">선택하세요</option>
-                {infraNodes.map((n) => (
-                  <option key={n.id} value={n.id}>
-                    {n.id} ({n.container})
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                value={step.target || ""}
-                onChange={(e) => set("target", e.target.value)}
-                placeholder="노드 id (인프라 세팅에서 등록)"
-              />
+            {(() => {
+              const validNodes = infraNodes.filter((n) => n.id?.trim() && n.container?.trim());
+              return validNodes.length > 0 ? (
+                <select value={step.target || ""} onChange={(e) => set("target", e.target.value)}>
+                  <option value="">선택하세요</option>
+                  {validNodes.map((n) => (
+                    <option key={n.id} value={n.id}>
+                      {n.id} ({n.container})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  value={step.target || ""}
+                  onChange={(e) => set("target", e.target.value)}
+                  placeholder="노드 id (인프라 세팅에서 등록)"
+                />
+              );
+            })()}
             )}
           </div>
           <div className="form-row">
