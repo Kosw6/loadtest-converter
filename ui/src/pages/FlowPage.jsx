@@ -14,19 +14,19 @@ import "@xyflow/react/dist/style.css";
 
 import { useScenario, newStep } from "../context/ScenarioContext.jsx";
 import StepNode from "../components/StepNode.jsx";
+import InfraFlowNode from "../components/InfraFlowNode.jsx";
 import NodeEditPanel from "../components/NodeEditPanel.jsx";
 
 // ── 노드 타입 등록 ────────────────────────────────────────────────────────────
-const NODE_TYPES = { stepNode: StepNode };
+const NODE_TYPES = { stepNode: StepNode, infraNode: InfraFlowNode };
 
-// ── DAG 레이아웃 계산 ─────────────────────────────────────────────────────────
+// ── DAG 레이아웃 계산 (step 노드용) ──────────────────────────────────────────
 function computeLayout(steps) {
   if (!steps.length) return {};
-
   const levelMap = {};
   const getLevel = (id, visiting = new Set()) => {
     if (id in levelMap) return levelMap[id];
-    if (visiting.has(id)) return 0; // 순환 방지
+    if (visiting.has(id)) return 0;
     visiting.add(id);
     const step = steps.find((s) => s.id === id);
     if (!step?.dependsOn?.length) return (levelMap[id] = 0);
@@ -35,7 +35,6 @@ function computeLayout(steps) {
   };
   steps.forEach((s) => getLevel(s.id));
 
-  // 레벨별 그룹핑
   const byLevel = {};
   steps.forEach((s) => {
     const l = levelMap[s.id] ?? 0;
@@ -60,8 +59,7 @@ function computeLayout(steps) {
   return positions;
 }
 
-// steps → RF nodes (기존 노드의 position 유지)
-function toNodes(steps, existing = []) {
+function toStepNodes(steps, existing = []) {
   const layout = computeLayout(steps);
   return steps.map((step) => {
     const prev = existing.find((n) => n.id === step.id);
@@ -74,7 +72,6 @@ function toNodes(steps, existing = []) {
   });
 }
 
-// steps → RF edges
 function toEdges(steps) {
   const EDGE_STYLE = { stroke: "#4c6ef5", strokeWidth: 2 };
   return steps.flatMap((step) =>
@@ -88,39 +85,99 @@ function toEdges(steps) {
   );
 }
 
+// infra 노드 → RF 노드 (RF id = __infra__${idx})
+function toInfraRFNodes(infraNodes, existing = [], onUpdate, onRemove) {
+  return (infraNodes || []).map((node, idx) => {
+    const rfId = `__infra__${idx}`;
+    const prev = existing.find((n) => n.id === rfId);
+    return {
+      id: rfId,
+      type: "infraNode",
+      position: prev?.position ?? {
+        x: 700 + (idx % 3) * 240,
+        y: 40 + Math.floor(idx / 3) * 150,
+      },
+      data: {
+        node,
+        onUpdate: (updated) => onUpdate(idx, updated),
+        onRemove: () => onRemove(idx),
+      },
+      draggable: true,
+      selectable: true,
+    };
+  });
+}
+
 // ── FlowPage ──────────────────────────────────────────────────────────────────
 export default function FlowPage() {
-  const { steps, infra, addStep, updateStepById, removeStepById, addDependency, removeDependency } =
-    useScenario();
+  const {
+    steps, infra, setInfra,
+    addStep, updateStepById, removeStepById,
+    addDependency, removeDependency,
+  } = useScenario();
 
   const allStepIds = steps.map((s) => s.id);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(() => toNodes(steps));
+  // ── infra 조작 ───────────────────────────────────────────────────────────────
+  const handleUpdateInfra = useCallback((idx, updated) => {
+    setInfra((prev) => ({
+      ...prev,
+      nodes: prev.nodes.map((n, i) => (i === idx ? updated : n)),
+    }));
+  }, [setInfra]);
+
+  const handleRemoveInfra = useCallback((idx) => {
+    setInfra((prev) => ({
+      ...prev,
+      nodes: prev.nodes.filter((_, i) => i !== idx),
+    }));
+  }, [setInfra]);
+
+  const handleAddInfra = useCallback(() => {
+    setInfra((prev) => ({
+      ...prev,
+      nodes: [...(prev.nodes || []), { id: "", container: "" }],
+    }));
+  }, [setInfra]);
+
+  // ── RF 상태 초기화 ──────────────────────────────────────────────────────────
+  const [nodes, setNodes, onNodesChange] = useNodesState(() => [
+    ...toStepNodes(steps),
+    ...toInfraRFNodes(infra?.nodes || [], [], handleUpdateInfra, handleRemoveInfra),
+  ]);
   const [edges, setEdges, onEdgesChange] = useEdgesState(() => toEdges(steps));
   const [selectedId, setSelectedId] = useState(null);
 
-  // steps가 외부(FormPage)에서 변경되면 노드/엣지 동기화
-  const prevCountRef = useRef(steps.length);
+  // ── steps 동기화 ─────────────────────────────────────────────────────────────
+  const prevStepCountRef = useRef(steps.length);
   useEffect(() => {
-    if (steps.length !== prevCountRef.current) {
-      setNodes((prev) => toNodes(steps, prev));
-      setEdges(toEdges(steps));
-      prevCountRef.current = steps.length;
-    } else {
-      // 데이터만 업데이트 (position은 유지)
-      setNodes((prev) =>
-        prev.map((n) => {
-          const s = steps.find((s) => s.id === n.id);
-          return s ? { ...n, data: { step: s } } : n;
-        })
-      );
-      setEdges(toEdges(steps));
-    }
+    setNodes((prev) => {
+      const infraRF = prev.filter((n) => n.type === "infraNode");
+      const stepRF  = prev.filter((n) => n.type === "stepNode");
+      const newStepNodes = toStepNodes(steps, stepRF);
+      return [...newStepNodes, ...infraRF];
+    });
+    setEdges(toEdges(steps));
+    prevStepCountRef.current = steps.length;
   }, [steps]);
+
+  // ── infra 동기화 ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    setNodes((prev) => {
+      const stepRF  = prev.filter((n) => n.type === "stepNode");
+      const infraRF = prev.filter((n) => n.type === "infraNode");
+      const newInfraNodes = toInfraRFNodes(
+        infra?.nodes || [], infraRF, handleUpdateInfra, handleRemoveInfra
+      );
+      return [...stepRF, ...newInfraNodes];
+    });
+  }, [infra, handleUpdateInfra, handleRemoveInfra]);
 
   // ── 연결 ────────────────────────────────────────────────────────────────────
   const onConnect = useCallback(
     (connection) => {
+      // infra 노드끼리 / infra↔step 연결 방지
+      if (connection.source?.startsWith("__infra__") || connection.target?.startsWith("__infra__")) return;
       const edge = {
         ...connection,
         id: `${connection.source}->${connection.target}`,
@@ -133,48 +190,33 @@ export default function FlowPage() {
     [addDependency]
   );
 
-  // ── 엣지 삭제 (Delete 키) ────────────────────────────────────────────────────
   const onEdgesDelete = useCallback(
-    (deleted) => {
-      deleted.forEach((e) => removeDependency(e.target, e.source));
-    },
+    (deleted) => { deleted.forEach((e) => removeDependency(e.target, e.source)); },
     [removeDependency]
   );
 
-  // ── 노드 위치 저장 ────────────────────────────────────────────────────────────
   const onNodeDragStop = useCallback((_, node) => {
-    setNodes((prev) =>
-      prev.map((n) => (n.id === node.id ? { ...n, position: node.position } : n))
-    );
+    setNodes((prev) => prev.map((n) => (n.id === node.id ? { ...n, position: node.position } : n)));
   }, []);
 
-  // ── 노드 클릭 ────────────────────────────────────────────────────────────────
+  // ── 노드 클릭: infra 노드는 인라인 편집이므로 패널 열지 않음 ─────────────────
   const onNodeClick = useCallback((_, node) => {
+    if (node.type === "infraNode") return;
     setSelectedId(node.id);
   }, []);
 
-  const onPaneClick = useCallback(() => {
-    setSelectedId(null);
-  }, []);
+  const onPaneClick = useCallback(() => { setSelectedId(null); }, []);
 
-  // ── step 편집 (패널에서) ──────────────────────────────────────────────────────
+  // ── step 편집 ─────────────────────────────────────────────────────────────
   const handleStepChange = useCallback(
     (updated) => {
       const oldId = selectedId;
       const newId = updated.id;
-      const idChanged = oldId !== newId;
-
-      // context 업데이트 (ID 변경 시 cascade는 context 내부에서 처리)
       updateStepById(oldId, updated);
-
-      if (idChanged) {
-        // RF 노드 ID 변경
+      if (oldId !== newId) {
         setNodes((prev) =>
-          prev.map((n) =>
-            n.id === oldId ? { ...n, id: newId, data: { step: updated } } : n
-          )
+          prev.map((n) => n.id === oldId ? { ...n, id: newId, data: { step: updated } } : n)
         );
-        // RF 엣지의 source/target 업데이트
         setEdges((prev) =>
           prev.map((e) => ({
             ...e,
@@ -193,8 +235,7 @@ export default function FlowPage() {
     [selectedId, updateStepById]
   );
 
-  // ── step 삭제 ────────────────────────────────────────────────────────────────
-  const handleRemove = useCallback(
+  const handleRemoveStep = useCallback(
     (id) => {
       removeStepById(id);
       setNodes((prev) => prev.filter((n) => n.id !== id));
@@ -206,25 +247,23 @@ export default function FlowPage() {
 
   // ── step 추가 ────────────────────────────────────────────────────────────────
   const handleAddStep = useCallback(() => {
-    // 임시 ID: 패널에서 사용자가 직접 변경
     const tempId = `new-step-${Date.now()}`;
     const s = { ...newStep(steps.length), id: tempId };
     addStep(s);
-    const newNode = {
-      id: tempId,
-      type: "stepNode",
-      position: { x: 80 + (steps.length % 5) * 60, y: 80 + Math.floor(steps.length / 5) * 160 },
-      data: { step: s },
-    };
-    setNodes((prev) => [...prev, newNode]);
+    setNodes((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        type: "stepNode",
+        position: { x: 80 + (steps.length % 5) * 60, y: 80 + Math.floor(steps.length / 5) * 160 },
+        data: { step: s },
+      },
+    ]);
     setSelectedId(tempId);
   }, [steps.length, addStep]);
 
-  // ── 패널 너비 드래그 리사이즈 ───────────────────────────────────────────────
-  const PANEL_MIN = 280;
-  const PANEL_MAX = 720;
-  const PANEL_DEFAULT = 420;
-
+  // ── 패널 리사이즈 ─────────────────────────────────────────────────────────
+  const PANEL_MIN = 280, PANEL_MAX = 720, PANEL_DEFAULT = 420;
   const [panelWidth, setPanelWidth] = useState(PANEL_DEFAULT);
   const [resizing, setResizing] = useState(false);
   const resizeStartX = useRef(0);
@@ -238,15 +277,11 @@ export default function FlowPage() {
   }, [panelWidth]);
 
   useEffect(() => {
-    if (!resizing) {
-      document.body.classList.remove("resizing");
-      return;
-    }
+    if (!resizing) { document.body.classList.remove("resizing"); return; }
     document.body.classList.add("resizing");
     const onMove = (e) => {
-      const delta = resizeStartX.current - e.clientX; // 왼쪽으로 드래그 → 넓어짐
-      const next = Math.min(PANEL_MAX, Math.max(PANEL_MIN, resizeStartW.current + delta));
-      setPanelWidth(next);
+      const delta = resizeStartX.current - e.clientX;
+      setPanelWidth(Math.min(PANEL_MAX, Math.max(PANEL_MIN, resizeStartW.current + delta)));
     };
     const onUp = () => setResizing(false);
     window.addEventListener("mousemove", onMove);
@@ -259,11 +294,10 @@ export default function FlowPage() {
   }, [resizing]);
 
   const selectedStep = steps.find((s) => s.id === selectedId) ?? null;
-  const panelOpen = selectedId !== null;  // ""(빈 ID)도 선택된 것으로 처리
+  const panelOpen = selectedId !== null;
 
   return (
     <div className="flow-page">
-      {/* ── React Flow 캔버스 ── */}
       <div className="flow-canvas">
         <ReactFlow
           nodes={nodes}
@@ -284,30 +318,39 @@ export default function FlowPage() {
           <Background color="#30363d" gap={20} />
           <Controls />
           <MiniMap
-            nodeColor={(n) =>
-              n.data?.step?.type === "command" ? "#3fb950" : "#4c6ef5"
-            }
+            nodeColor={(n) => {
+              if (n.type === "infraNode") return "#3fb950";
+              return n.data?.step?.type === "command" ? "#3fb950" : "#4c6ef5";
+            }}
             maskColor="rgba(13,17,23,0.7)"
           />
+
+          {/* ── 상단 좌측 버튼 ── */}
           <Panel position="top-left">
-            <button className="btn-primary flow-add-btn" onClick={handleAddStep}>
-              + Step 추가
-            </button>
+            <div className="flow-top-btns">
+              <button className="btn-primary flow-add-btn" onClick={handleAddStep}>
+                + Step
+              </button>
+              <button className="flow-infra-btn" onClick={handleAddInfra}>
+                + Infra
+              </button>
+            </div>
           </Panel>
+
           <Panel position="top-right" style={{ fontSize: 11, color: "#8b949e" }}>
             노드 클릭: 편집 &nbsp;|&nbsp; 핸들 드래그: 연결 &nbsp;|&nbsp; Delete: 엣지 삭제
           </Panel>
         </ReactFlow>
       </div>
 
-      {/* ── 우측 편집 패널 ── */}
+      {/* ── 우측 편집 패널 (step만) ── */}
       <div
-        className={`flow-panel ${panelOpen ? "flow-panel--open" : ""}`}
+        className={"flow-panel" + (panelOpen ? " flow-panel--open" : "")}
         style={panelOpen ? { width: panelWidth } : { width: 0 }}
       >
         {panelOpen && (
           <div
-            className={`panel-resize-handle ${resizing ? "panel-resize-handle--active" : ""}`}
+            className={"panel-resize-handle" + (resizing ? " panel-resize-handle--active" : "")}
             onMouseDown={onResizeMouseDown}
             title="드래그해서 너비 조절"
           />
@@ -317,7 +360,7 @@ export default function FlowPage() {
           allStepIds={allStepIds}
           infraNodes={infra?.nodes || []}
           onChange={handleStepChange}
-          onRemove={() => selectedId && handleRemove(selectedId)}
+          onRemove={() => selectedId && handleRemoveStep(selectedId)}
           onClose={() => setSelectedId(null)}
         />
       </div>
