@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import ActionForm from "./ActionForm.jsx";
+import WSMessageForm from "./WSMessageForm.jsx";
 import FinalCheckForm from "./FinalCheckForm.jsx";
 import InlineUsersTable from "./InlineUsersTable.jsx";
 import InlineParamsEditor from "./InlineParamsEditor.jsx";
@@ -244,6 +245,25 @@ export default function StepCard({ step, allStepIds, infraNodes = [], hasAuthSte
           <button className="btn-secondary" onClick={() => set("wsNodes", [...(step.wsNodes || []), ""])}>
             + 노드 추가
           </button>
+
+          <div className="section-divider">
+            Params
+            <Tooltip text={"params 파일에서 teamId, graphId 등 접속 파라미터를 VU별로 주입합니다.\n파일 경로는 scenario 기준 상대 경로입니다."} />
+          </div>
+          <InlineParamsEditor
+            paramsData={step.paramsData || null}
+            mode="rows"
+            onChange={(data) => set("paramsData", data)}
+          />
+
+          <div className="section-divider">
+            WS Messages
+            <Tooltip text={"연결 후 주기적으로 전송할 메시지를 정의합니다.\n메시지가 없으면 연결만 유지합니다."} />
+          </div>
+          <WSMessageForm
+            messages={step.wsMessages || []}
+            onChange={(msgs) => set("wsMessages", msgs)}
+          />
         </>
       )}
 

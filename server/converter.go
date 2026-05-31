@@ -102,6 +102,12 @@ func buildStep(s StepInput) map[string]any {
 		if s.Delay != "" {
 			step["delay"] = s.Delay
 		}
+		if len(s.WSMessages) > 0 {
+			step["ws_messages"] = buildWSMessages(s.WSMessages)
+		}
+		if s.ParamsData != nil || s.Params.Mode != "" {
+			step["params"] = buildParamsBlock(s)
+		}
 		return step
 
 	case "auth":
@@ -318,6 +324,35 @@ func buildParamsBlock(s StepInput) map[string]any {
 	}
 
 	return block
+}
+
+func buildWSMessages(msgs []WSMessageInput) []map[string]any {
+	var result []map[string]any
+	for _, m := range msgs {
+		var body []map[string]any
+		for _, f := range m.Body {
+			field := map[string]any{
+				"key":        f.Key,
+				"value_type": f.ValueType,
+			}
+			switch f.ValueType {
+			case "randomInt":
+				field["min"] = f.Min
+				field["max"] = f.Max
+			case "param":
+				field["param_key"] = f.ParamKey
+			case "fixed":
+				field["fixed"] = f.Fixed
+			}
+			body = append(body, field)
+		}
+		result = append(result, map[string]any{
+			"type":     m.Type,
+			"interval": m.Interval,
+			"body":     body,
+		})
+	}
+	return result
 }
 
 func templatePath(template string) string {

@@ -57,10 +57,9 @@ type StepInput struct {
 	Action    string            `json:"action"`  // chaos step: stop|start|restart|wait_healthy
 
 	// k6_ws step
-	// WSUrl: 게이트웨이 단일 URL (ws://gateway:8080/ws)
-	// WSNodes: 직접 다중 노드 URL 목록 (VU별 round-robin 배정), 있으면 WSUrl보다 우선
-	WSUrl   string   `json:"wsUrl"`
-	WSNodes []string `json:"wsNodes"`
+	WSUrl      string           `json:"wsUrl"`
+	WSNodes    []string         `json:"wsNodes"`
+	WSMessages []WSMessageInput `json:"wsMessages"`
 
 	// delay: step 시작 전 대기 시간 (예: "30s")
 	// chaos + k6_ws를 같은 wave에서 시간차 실행할 때 사용
@@ -125,6 +124,23 @@ type UserRow map[string]string
 type ParamsInput struct {
 	Rows    []map[string]any            `json:"rows"`
 	PerUser map[string][]map[string]any `json:"perUser"`
+}
+
+// WSBodyFieldInput은 WS 메시지 body 필드 하나
+type WSBodyFieldInput struct {
+	Key       string `json:"key"`
+	ValueType string `json:"valueType"` // fixed | randomInt | now | param
+	Fixed     string `json:"fixed"`
+	Min       int    `json:"min"`
+	Max       int    `json:"max"`
+	ParamKey  string `json:"paramKey"`
+}
+
+// WSMessageInput은 k6_ws step에서 주기적으로 전송할 메시지 설정
+type WSMessageInput struct {
+	Type     string             `json:"type"`
+	Interval int                `json:"interval"` // ms
+	Body     []WSBodyFieldInput `json:"body"`
 }
 
 // ─── Response ─────────────────────────────────────────────────────────────────

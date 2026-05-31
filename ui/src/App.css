@@ -820,6 +820,29 @@ code {
 .hint code { background: var(--bg-sub); padding: 1px 4px; border-radius: 3px; font-size: 11px; }
 .hint--auth-locked { color: var(--accent-blue, #4c6ef5); background: rgba(76,110,245,0.08); border: 1px solid rgba(76,110,245,0.25); border-radius: 6px; padding: 8px 10px; margin-top: 4px; }
 
+/* ─── WS Message Form ──────────────────────────────────────────────────────── */
+.ws-message-form { display: flex; flex-direction: column; gap: 10px; }
+.ws-msg-card { background: var(--bg-sub); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+.ws-msg-card-header { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+.ws-msg-index { font-size: 11px; font-weight: 600; color: var(--text-muted); padding-top: 2px; white-space: nowrap; }
+.ws-msg-header-row { display: flex; gap: 12px; flex: 1; flex-wrap: wrap; }
+.ws-msg-inline { flex-direction: row; align-items: center; gap: 6px; margin: 0; }
+.ws-msg-inline label { white-space: nowrap; font-size: 12px; }
+.ws-msg-remove { margin-left: auto; }
+.ws-unit { font-size: 12px; color: var(--text-muted); }
+.ws-body-section { margin-top: 4px; }
+.ws-body-label { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 6px; }
+.ws-body-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ws-body-table th { text-align: left; font-size: 11px; color: var(--text-muted); padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.ws-body-table td { padding: 4px 6px; vertical-align: middle; }
+.ws-body-input { width: 100%; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text); padding: 4px 6px; font-size: 12px; }
+.ws-body-input--num { width: 60px; }
+.ws-body-select { background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text); padding: 4px 6px; font-size: 12px; }
+.ws-range-row { display: flex; align-items: center; gap: 4px; }
+.ws-range-sep { color: var(--text-muted); font-size: 11px; }
+.ws-body-auto { font-size: 11px; color: var(--text-muted); font-style: italic; }
+.ws-add-field { margin-top: 6px; font-size: 12px; }
+
 /* ─── Load Mode Radio Group ──────────────────────────────────────────────────── */
 /* ─── Load Mode Segment ──────────────────────────────────────────────────────── */
 .load-mode-group {
