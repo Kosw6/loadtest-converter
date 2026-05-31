@@ -818,6 +818,7 @@ code {
 /* ─── Misc ───────────────────────────────────────────────────────────────────── */
 .hint { font-size: 12px; color: var(--text-muted); margin-top: 3px; line-height: 1.5; }
 .hint code { background: var(--bg-sub); padding: 1px 4px; border-radius: 3px; font-size: 11px; }
+.hint--auth-locked { color: var(--accent-blue, #4c6ef5); background: rgba(76,110,245,0.08); border: 1px solid rgba(76,110,245,0.25); border-radius: 6px; padding: 8px 10px; margin-top: 4px; }
 
 /* ─── Load Mode Radio Group ──────────────────────────────────────────────────── */
 /* ─── Load Mode Segment ──────────────────────────────────────────────────────── */

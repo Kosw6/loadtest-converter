@@ -109,6 +109,7 @@ export default function FlowPage() {
   } = useScenario();
 
   const allStepIds = steps.map((s) => s.id);
+  const hasAuthStep = steps.some((s) => s.type === "auth");
 
   // ── infra 조작 ───────────────────────────────────────────────────────────────
   const handleUpdateInfra = useCallback((idx, updated) => {
@@ -352,6 +353,7 @@ export default function FlowPage() {
           step={selectedStep}
           allStepIds={allStepIds}
           infraNodes={infra?.nodes || []}
+          hasAuthStep={hasAuthStep}
           onChange={handleStepChange}
           onRemove={() => selectedId && handleRemoveStep(selectedId)}
           onClose={() => setSelectedId(null)}

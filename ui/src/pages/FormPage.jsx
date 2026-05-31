@@ -22,6 +22,7 @@ export default function FormPage() {
       .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const allStepIds = steps.map((s) => s.id);
+  const hasAuthStep = steps.some((s) => s.type === "auth");
 
   return (
     <div className="form-page">
@@ -52,6 +53,7 @@ export default function FormPage() {
             step={step}
             allStepIds={allStepIds}
             infraNodes={infra.nodes || []}
+            hasAuthStep={hasAuthStep}
             onChange={(updated) => updateStep(idx, updated)}
             onRemove={() => removeStep(idx)}
             tourPrefix={idx === 0 ? "tour-step-0" : undefined}

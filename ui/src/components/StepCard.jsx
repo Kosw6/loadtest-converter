@@ -12,7 +12,7 @@ const TEMPLATES = [
 
 // panelMode=true: 헤더/접기 없이 body만 렌더 (NodeEditPanel에서 사용)
 // tourPrefix: 첫 번째 StepCard에만 전달되는 투어 ID 접두사 (e.g. "tour-step-0")
-export default function StepCard({ step, allStepIds, infraNodes = [], onChange, onRemove, panelMode = false, tourPrefix }) {
+export default function StepCard({ step, allStepIds, infraNodes = [], hasAuthStep = false, onChange, onRemove, panelMode = false, tourPrefix }) {
   const [open, setOpen] = useState(true);
 
   const set = (key, val) => onChange({ ...step, [key]: val });
@@ -435,7 +435,13 @@ export default function StepCard({ step, allStepIds, infraNodes = [], onChange, 
 
           {/* 인증 */}
           <div className="section-divider">인증 (Users)</div>
-          {usersAuthSection}
+          {hasAuthStep ? (
+            <p className="hint hint--auth-locked">
+              🔒 auth step이 감지되었습니다. 사전 로그인 결과가 이 step에 자동으로 적용됩니다.
+            </p>
+          ) : (
+            usersAuthSection
+          )}
 
           {/* Params */}
           <div className="section-divider">Params</div>

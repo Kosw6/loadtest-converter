@@ -1,7 +1,7 @@
 import React from "react";
 import StepCard from "./StepCard.jsx";
 
-export default function NodeEditPanel({ step, allStepIds, infraNodes = [], onChange, onRemove, onClose }) {
+export default function NodeEditPanel({ step, allStepIds, infraNodes = [], hasAuthStep = false, onChange, onRemove, onClose }) {
   if (!step) {
     return (
       <div className="node-panel node-panel--empty">
@@ -29,6 +29,7 @@ export default function NodeEditPanel({ step, allStepIds, infraNodes = [], onCha
           step={step}
           allStepIds={allStepIds}
           infraNodes={infraNodes}
+          hasAuthStep={hasAuthStep}
           onChange={onChange}
           onRemove={onRemove}
           panelMode
