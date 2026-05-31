@@ -86,6 +86,22 @@ func buildStep(s StepInput) map[string]any {
 	case "chaos":
 		step["target"] = s.Target
 		step["action"] = s.Action
+		if s.Delay != "" {
+			step["delay"] = s.Delay
+		}
+		return step
+
+	case "k6_ws":
+		step["vus"] = s.VUs
+		step["duration"] = s.Duration
+		if len(s.WSNodes) > 0 {
+			step["ws_nodes"] = s.WSNodes
+		} else if s.WSUrl != "" {
+			step["ws_url"] = s.WSUrl
+		}
+		if s.Delay != "" {
+			step["delay"] = s.Delay
+		}
 		return step
 
 	case "auth":

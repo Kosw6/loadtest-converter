@@ -55,6 +55,16 @@ type StepInput struct {
 	Checks    []FinalCheckInput `json:"checks"`  // final_check step 전용
 	Target    string            `json:"target"`  // chaos step: infra node id
 	Action    string            `json:"action"`  // chaos step: stop|start|restart|wait_healthy
+
+	// k6_ws step
+	// WSUrl: 게이트웨이 단일 URL (ws://gateway:8080/ws)
+	// WSNodes: 직접 다중 노드 URL 목록 (VU별 round-robin 배정), 있으면 WSUrl보다 우선
+	WSUrl   string   `json:"wsUrl"`
+	WSNodes []string `json:"wsNodes"`
+
+	// delay: step 시작 전 대기 시간 (예: "30s")
+	// chaos + k6_ws를 같은 wave에서 시간차 실행할 때 사용
+	Delay string `json:"delay"`
 }
 
 type ActionInput struct {

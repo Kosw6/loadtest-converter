@@ -105,6 +105,7 @@ export default function StepCard({ step, allStepIds, infraNodes = [], onChange, 
           <option value="final_check">final_check (상태 검증)</option>
           <option value="command">command</option>
           <option value="chaos">chaos (컨테이너 제어)</option>
+          <option value="k6_ws">k6_ws (WebSocket 부하)</option>
         </select>
       </div>
 
@@ -172,6 +173,77 @@ export default function StepCard({ step, allStepIds, infraNodes = [], onChange, 
               <option value="wait_healthy">wait_healthy — healthy 대기</option>
             </select>
           </div>
+        </>
+      )}
+
+      {/* Chaos + k6_ws 공통: delay */}
+      {(step.type === "chaos" || step.type === "k6_ws") && (
+        <div className="form-row">
+          <label>
+            Delay
+            <Tooltip text={"같은 wave의 다른 step과 시간차를 두고 실행할 때 설정.\n예: 30s — wave 시작 30초 후에 이 step 실행\nk6_ws 부하 중 chaos를 시간차로 끼워넣을 때 사용"} />
+          </label>
+          <input value={step.delay || ""} onChange={(e) => set("delay", e.target.value)} placeholder="30s" />
+        </div>
+      )}
+
+      {/* k6_ws */}
+      {step.type === "k6_ws" && (
+        <>
+          <div className="section-divider">WebSocket 설정</div>
+          <p className="hint">
+            게이트웨이 기반이면 WS URL 하나만 입력하세요.<br/>
+            직접 다중 노드 연결이면 노드 URL을 여러 개 추가하세요 (VU별 round-robin 배정).
+          </p>
+          <div className="form-row">
+            <label>
+              VUs
+              <Tooltip text={"동시에 연결할 가상 유저(WebSocket 클라이언트) 수"} />
+            </label>
+            <input type="number" value={step.vus || 1} min={1} onChange={(e) => set("vus", Number(e.target.value))} />
+          </div>
+          <div className="form-row">
+            <label>
+              Duration
+              <Tooltip text={"WebSocket 연결을 유지할 시간.\n예: 120s, 2m"} />
+            </label>
+            <input value={step.duration || ""} onChange={(e) => set("duration", e.target.value)} placeholder="120s" />
+          </div>
+          <div className="form-row">
+            <label>
+              WS URL
+              <Tooltip text={"게이트웨이 단일 접속 URL.\n예: ws://localhost:8080/ws\n다중 노드를 직접 연결할 경우 아래 노드 목록을 사용하세요."} />
+            </label>
+            <input
+              value={step.wsUrl || ""}
+              onChange={(e) => set("wsUrl", e.target.value)}
+              placeholder="ws://localhost:8080/ws"
+              disabled={(step.wsNodes || []).length > 0}
+            />
+          </div>
+          <div className="section-divider">WS Nodes (다중 노드 직접 연결)</div>
+          <p className="hint">노드 URL을 추가하면 WS URL보다 우선 적용됩니다.</p>
+          {(step.wsNodes || []).map((url, i) => (
+            <div key={i} className="form-row">
+              <label>Node {i + 1}</label>
+              <input
+                value={url}
+                onChange={(e) => {
+                  const nodes = [...(step.wsNodes || [])];
+                  nodes[i] = e.target.value;
+                  set("wsNodes", nodes);
+                }}
+                placeholder="ws://node1:8080/ws"
+              />
+              <button className="btn-icon" onClick={() => {
+                const nodes = (step.wsNodes || []).filter((_, j) => j !== i);
+                set("wsNodes", nodes);
+              }}>🗑</button>
+            </div>
+          ))}
+          <button className="btn-secondary" onClick={() => set("wsNodes", [...(step.wsNodes || []), ""])}>
+            + 노드 추가
+          </button>
         </>
       )}
 
