@@ -555,7 +555,8 @@ button { cursor: pointer; font-family: var(--font); font-size: 13px; border: non
   border-radius: 4px;
   letter-spacing: 0.5px;
 }
-.type-k6 { background: rgba(76, 110, 245, 0.2); color: var(--accent); }
+.type-k6    { background: rgba(76, 110, 245, 0.2); color: var(--accent); }
+.type-k6_ws { background: rgba(124, 58, 237, 0.2); color: #a78bfa; }
 .type-command { background: rgba(63, 185, 80, 0.15); color: var(--green); }
 .type-auth { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
 .type-final_check { background: rgba(239, 68, 68, 0.15); color: #ef4444; }

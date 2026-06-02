@@ -3,6 +3,7 @@ import { Handle, Position } from "@xyflow/react";
 
 const TYPE_META = {
   k6:          { icon: "⚡", color: "#4c6ef5", label: "K6" },
+  k6_ws:       { icon: "🔌", color: "#7c3aed", label: "K6 WS" },
   command:     { icon: "💻", color: "#3fb950", label: "CMD" },
   auth:        { icon: "🔐", color: "#e8a009", label: "AUTH" },
   final_check: { icon: "✅", color: "#56b3c4", label: "CHECK" },
@@ -24,6 +25,12 @@ function StepSub({ step }) {
     }
     case "chaos":
       return <span className="step-node-sub">{step.target ? `${step.target} · ${step.action || "stop"}` : "타겟 미설정"}</span>;
+    case "k6_ws": {
+      const msgCount = step.wsMessages?.length || 0;
+      const nodeCount = step.wsNodes?.length || 0;
+      const conn = nodeCount > 1 ? `${nodeCount} nodes` : (step.wsUrl ? "gateway" : "미설정");
+      return <span className="step-node-sub">{conn} · {msgCount} msg{msgCount !== 1 ? "s" : ""}</span>;
+    }
     default:
       return null;
   }

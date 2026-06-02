@@ -19,13 +19,16 @@ type yamlScenario struct {
 		Description string `yaml:"description"`
 	} `yaml:"meta"`
 	Infra struct {
-		Type    string `yaml:"type"`
-		File    string `yaml:"file"`
-		EnvFile string `yaml:"env_file"`
+		Type    string            `yaml:"type"`
+		File    string            `yaml:"file"`
+		EnvFile string            `yaml:"env_file"`
 		Nodes   []struct {
 			ID        string `yaml:"id"`
 			Container string `yaml:"container"`
 		} `yaml:"nodes"`
+		// terraform 전용
+		Dir     string            `yaml:"dir"`
+		Outputs map[string]string `yaml:"outputs"`
 	} `yaml:"infra"`
 	Steps []yamlStep `yaml:"steps"`
 }
@@ -164,6 +167,8 @@ func ImportScenario(yamlStr string) (ConvertRequest, error) {
 			Type:    doc.Infra.Type,
 			File:    doc.Infra.File,
 			EnvFile: doc.Infra.EnvFile,
+			Dir:     doc.Infra.Dir,
+			Outputs: doc.Infra.Outputs,
 		},
 	}
 

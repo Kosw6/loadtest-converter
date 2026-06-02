@@ -19,7 +19,15 @@ function loadFromLS() {
   }
 }
 
-const DEFAULT_INFRA = { type: "docker-compose", file: "", envFile: "", nodes: [] };
+const DEFAULT_INFRA = {
+  type: "docker-compose",
+  file: "",
+  envFile: "",
+  nodes: [],
+  // terraform 전용
+  dir: "",
+  outputs: {},
+};
 
 export function newStep(length = 0) {
   return {

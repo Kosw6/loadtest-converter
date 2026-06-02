@@ -48,6 +48,19 @@ func buildInfraBlock(infra InfraInput) map[string]any {
 	block := map[string]any{
 		"type": infra.Type,
 	}
+
+	if infra.Type == "terraform" {
+		// terraform 전용 필드
+		if infra.Dir != "" {
+			block["dir"] = infra.Dir
+		}
+		if len(infra.Outputs) > 0 {
+			block["outputs"] = infra.Outputs
+		}
+		return block
+	}
+
+	// docker-compose 전용 필드
 	if infra.File != "" {
 		block["file"] = infra.File
 	}

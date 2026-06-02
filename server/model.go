@@ -9,10 +9,14 @@ type ConvertRequest struct {
 }
 
 type InfraInput struct {
-	Type    string           `json:"type"`    // docker-compose
+	Type    string           `json:"type"`    // "docker-compose" | "terraform"
 	File    string           `json:"file"`    // docker-compose.yml 경로
 	EnvFile string           `json:"envFile"` // .env.runtime 경로 (선택)
 	Nodes   []InfraNodeInput `json:"nodes"`
+
+	// terraform 전용
+	Dir     string            `json:"dir"`     // terraform 디렉토리 경로
+	Outputs map[string]string `json:"outputs"` // 변수명 → terraform output 키
 }
 
 type InfraNodeInput struct {
