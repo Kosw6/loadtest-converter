@@ -198,6 +198,70 @@ export default function StepCard({ step, allStepIds, infraNodes = [], hasAuthSte
           </p>
           <div className="form-row">
             <label>
+              측정 모드
+              <Tooltip text={"basic: 연결·메시지 전송만 (순수 부하)\nrealtime: sentAt 기반 latency·drop·역할(sender/receiver) 측정\n\nrealtime은 서버가 받은 메시지에 sentAt 필드를 유지한 채 다른 클라이언트에 relay 한다는 전제가 필요합니다."} />
+            </label>
+            <select
+              value={step.template || "basic"}
+              onChange={(e) => set("template", e.target.value)}
+            >
+              <option value="basic">basic — 연결/전송만 (부하)</option>
+              <option value="realtime">realtime — latency/drop 측정</option>
+            </select>
+          </div>
+
+          {/* realtime 전용 옵션 */}
+          {step.template === "realtime" && (
+            <>
+              <div className="form-row">
+                <label>
+                  Sender 비율
+                  <Tooltip text={"전체 VU 중 메시지를 전송하는 sender 비율 (0.0~1.0).\n나머지는 receiver(수신 전용).\n예: 0.3 → 30%가 sender"} />
+                </label>
+                <input
+                  type="number" step="0.1" min={0} max={1}
+                  value={step.senderRatio ?? 0.3}
+                  onChange={(e) => set("senderRatio", Number(e.target.value))}
+                />
+              </div>
+              <div className="form-row">
+                <label>
+                  Sender 수 (명시)
+                  <Tooltip text={"sender VU 수를 직접 지정. 0이면 Sender 비율로 계산.\n예: VUs=10, Sender 수=3 → VU 1~3이 sender"} />
+                </label>
+                <input
+                  type="number" min={0}
+                  value={step.senderCount ?? 0}
+                  onChange={(e) => set("senderCount", Number(e.target.value))}
+                />
+              </div>
+              <div className="form-row">
+                <label>
+                  Latency OK (ms)
+                  <Tooltip text={"이 값 이하 latency를 'OK'로 분류. 기본 200ms"} />
+                </label>
+                <input
+                  type="number" min={1}
+                  value={step.latOkMs ?? 200}
+                  onChange={(e) => set("latOkMs", Number(e.target.value))}
+                />
+              </div>
+              <div className="form-row">
+                <label>
+                  Latency WARN (ms)
+                  <Tooltip text={"이 값 이하를 'WARN', 초과를 'BAD'로 분류. 기본 1000ms"} />
+                </label>
+                <input
+                  type="number" min={1}
+                  value={step.latWarnMs ?? 1000}
+                  onChange={(e) => set("latWarnMs", Number(e.target.value))}
+                />
+              </div>
+            </>
+          )}
+
+          <div className="form-row">
+            <label>
               VUs
               <Tooltip text={"동시에 연결할 가상 유저(WebSocket 클라이언트) 수"} />
             </label>

@@ -54,6 +54,15 @@ export function newStep(length = 0) {
     checks: [],       // final_check step 전용
     target: "",       // chaos step 전용
     action: "stop",   // chaos step 전용
+    // k6_ws 전용
+    wsUrl: "",
+    wsNodes: [],
+    wsMessages: [],
+    // k6_ws realtime 전용
+    senderRatio: 0.3,
+    senderCount: 0,
+    latOkMs: 200,
+    latWarnMs: 1000,
   };
 }
 

@@ -121,6 +121,22 @@ func buildStep(s StepInput) map[string]any {
 		if s.ParamsData != nil || s.Params.Mode != "" {
 			step["params"] = buildParamsBlock(s)
 		}
+		// realtime 측정 모드: template + 측정 파라미터 출력
+		if s.Template == "realtime" {
+			step["template"] = "realtime"
+			if s.SenderRatio > 0 {
+				step["sender_ratio"] = s.SenderRatio
+			}
+			if s.SenderCount > 0 {
+				step["sender_count"] = s.SenderCount
+			}
+			if s.LatOkMs > 0 {
+				step["lat_ok_ms"] = s.LatOkMs
+			}
+			if s.LatWarnMs > 0 {
+				step["lat_warn_ms"] = s.LatWarnMs
+			}
+		}
 		return step
 
 	case "auth":

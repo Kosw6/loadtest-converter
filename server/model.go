@@ -65,6 +65,12 @@ type StepInput struct {
 	WSNodes    []string         `json:"wsNodes"`
 	WSMessages []WSMessageInput `json:"wsMessages"`
 
+	// k6_ws realtime 전용 (Template="realtime"일 때 사용)
+	SenderRatio float64 `json:"senderRatio"`
+	SenderCount int     `json:"senderCount"`
+	LatOkMs     int     `json:"latOkMs"`
+	LatWarnMs   int     `json:"latWarnMs"`
+
 	// delay: step 시작 전 대기 시간 (예: "30s")
 	// chaos + k6_ws를 같은 wave에서 시간차 실행할 때 사용
 	Delay string `json:"delay"`

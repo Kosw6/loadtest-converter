@@ -53,6 +53,33 @@ type yamlStep struct {
 	Checks    []yamlCheck       `yaml:"checks"`
 	Target    string            `yaml:"target"`
 	Action    string            `yaml:"action"`
+	Delay     string            `yaml:"delay"`
+
+	// k6_ws
+	WSUrl      string             `yaml:"ws_url"`
+	WSNodes    []string           `yaml:"ws_nodes"`
+	WSMessages []yamlWSMessage    `yaml:"ws_messages"`
+
+	// k6_ws realtime
+	SenderRatio float64 `yaml:"sender_ratio"`
+	SenderCount int     `yaml:"sender_count"`
+	LatOkMs     int     `yaml:"lat_ok_ms"`
+	LatWarnMs   int     `yaml:"lat_warn_ms"`
+}
+
+type yamlWSMessage struct {
+	Type     string             `yaml:"type"`
+	Interval int                `yaml:"interval"`
+	Body     []yamlWSBodyField  `yaml:"body"`
+}
+
+type yamlWSBodyField struct {
+	Key       string `yaml:"key"`
+	ValueType string `yaml:"value_type"`
+	Fixed     string `yaml:"fixed"`
+	Min       int    `yaml:"min"`
+	Max       int    `yaml:"max"`
+	ParamKey  string `yaml:"param_key"`
 }
 
 // yamlEndpoint는 구버전 scenario.yml의 endpoints 필드 (actions로 변환)
@@ -257,6 +284,35 @@ func convertYAMLStep(s yamlStep) StepInput {
 			Strategy: s.Params.Strategy,
 			UserKey:  s.Params.UserKey,
 		},
+		// k6_ws
+		Delay:       s.Delay,
+		WSUrl:       s.WSUrl,
+		WSNodes:     s.WSNodes,
+		// k6_ws realtime
+		SenderRatio: s.SenderRatio,
+		SenderCount: s.SenderCount,
+		LatOkMs:     s.LatOkMs,
+		LatWarnMs:   s.LatWarnMs,
+	}
+
+	// ws_messages 역변환
+	for _, m := range s.WSMessages {
+		var body []WSBodyFieldInput
+		for _, f := range m.Body {
+			body = append(body, WSBodyFieldInput{
+				Key:       f.Key,
+				ValueType: f.ValueType,
+				Fixed:     f.Fixed,
+				Min:       f.Min,
+				Max:       f.Max,
+				ParamKey:  f.ParamKey,
+			})
+		}
+		step.WSMessages = append(step.WSMessages, WSMessageInput{
+			Type:     m.Type,
+			Interval: m.Interval,
+			Body:     body,
+		})
 	}
 
 	// actions (신버전)
