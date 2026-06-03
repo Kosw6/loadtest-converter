@@ -10,7 +10,7 @@ import { useTour } from "./hooks/useTour.js";
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { meta, infra, steps, setMeta, setInfra, setSteps } = useScenario();
+  const { meta, infra, steps, setMeta, setInfra, setSteps, resetScenario } = useScenario();
 
   const [yaml, setYaml] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -111,6 +111,18 @@ export default function App() {
           )}
           {!isTutorial && (
             <>
+              <button
+                className="btn-ghost"
+                onClick={() => {
+                  if (window.confirm("작성 중인 시나리오를 모두 비우고 새로 시작할까요?")) {
+                    resetScenario();
+                    if (isFlow) navigate("/");
+                  }
+                }}
+                title="작성 중인 시나리오 초기화"
+              >
+                🆕 새로 시작
+              </button>
               <button id="tour-import-btn" className="btn-ghost" onClick={() => setImportOpen(true)}>
                 📥 가져오기
               </button>

@@ -2,21 +2,34 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 
 const LS_KEY = "lc_scenario";
 
+// 세션 단위 저장 (sessionStorage):
+//  - 새로고침   → 유지 (같은 탭 세션)
+//  - 새 탭/재접속 → 초기화 (세션 종료 시 자동 삭제)
+// 과거 localStorage 잔존 값은 mount 시 1회 정리한다.
 function saveToLS(meta, infra, steps) {
   try {
     const sanitized = steps.map((s) => ({ ...s, paramsData: null, usersData: [] }));
-    localStorage.setItem(LS_KEY, JSON.stringify({ meta, infra, steps: sanitized }));
+    sessionStorage.setItem(LS_KEY, JSON.stringify({ meta, infra, steps: sanitized }));
   } catch (_) {}
 }
 
 function loadFromLS() {
   try {
-    const raw = localStorage.getItem(LS_KEY);
+    // 구버전 localStorage 값 제거 (재접속 시 고정값이 뜨던 원인)
+    localStorage.removeItem(LS_KEY);
+    const raw = sessionStorage.getItem(LS_KEY);
     if (!raw) return null;
     return JSON.parse(raw);
   } catch (_) {
     return null;
   }
+}
+
+function clearLS() {
+  try {
+    sessionStorage.removeItem(LS_KEY);
+    localStorage.removeItem(LS_KEY);
+  } catch (_) {}
 }
 
 const DEFAULT_INFRA = {
@@ -86,6 +99,14 @@ export function ScenarioProvider({ children }) {
   useEffect(() => {
     saveToLS(meta, infra, steps);
   }, [meta, infra, steps]);
+
+  // 전체 초기화 — "새로 시작" 버튼에서 호출
+  const resetScenario = useCallback(() => {
+    clearLS();
+    setMeta({ name: "", description: "" });
+    setInfra(DEFAULT_INFRA);
+    setSteps([newStep(0)]);
+  }, []);
 
   const addStep = useCallback((step) => {
     setSteps((prev) => [...prev, step || newStep(prev.length)]);
@@ -160,6 +181,7 @@ export function ScenarioProvider({ children }) {
         meta, setMeta,
         infra, setInfra,
         steps, setSteps,
+        resetScenario,
         addStep, updateStep, updateStepById,
         removeStep, removeStepById,
         addDependency, removeDependency,

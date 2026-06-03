@@ -285,6 +285,19 @@ export default function FlowPage() {
     [removeStepById]
   );
 
+  // ── 캔버스에서 Delete 키로 노드 삭제 → context에도 반영 ───────────────────────
+  const onNodesDelete = useCallback(
+    (deleted) => {
+      deleted.forEach((node) => {
+        // infra 패널은 삭제 대상에서 제외 (다음 동기화에서 복구됨)
+        if (node.type === "infraNode") return;
+        removeStepById(node.id);
+      });
+      if (deleted.some((n) => n.id === selectedId)) setSelectedId(null);
+    },
+    [removeStepById, selectedId]
+  );
+
   // ── step 추가 ────────────────────────────────────────────────────────────────
   const handleAddStep = useCallback(() => {
     const tempId = `new-step-${Date.now()}`;
@@ -344,6 +357,7 @@ export default function FlowPage() {
           edges={edges}
           nodeTypes={NODE_TYPES}
           onNodesChange={onNodesChange}
+          onNodesDelete={onNodesDelete}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onEdgesDelete={onEdgesDelete}
