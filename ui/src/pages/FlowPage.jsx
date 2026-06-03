@@ -86,15 +86,15 @@ function toEdges(steps) {
 }
 
 // infra 노드 → 단일 패널 RF 노드 (RF id = __infra__panel)
-function toInfraRFNodes(infraNodes, existing = [], onAdd, onUpdate, onRemove) {
-  if (!infraNodes || infraNodes.length === 0) return [];
+// infra 패널은 항상 렌더 (type/dir/outputs 편집을 위해 노드가 없어도 표시)
+function toInfraRFNodes(infra, existing = [], handlers) {
   const rfId = "__infra__panel";
   const prev = existing.find((n) => n.id === rfId);
   return [{
     id: rfId,
     type: "infraNode",
     position: prev?.position ?? { x: 700, y: 40 },
-    data: { nodes: infraNodes, onAdd, onUpdate, onRemove },
+    data: { infra, ...handlers },
     draggable: true,
     selectable: true,
   }];
@@ -111,32 +111,80 @@ export default function FlowPage() {
   const allStepIds = steps.map((s) => s.id);
   const hasAuthStep = steps.some((s) => s.type === "auth");
 
-  // ── infra 조작 ───────────────────────────────────────────────────────────────
+  // ── infra: 타입 / dir ────────────────────────────────────────────────────────
+  const handleSetInfraType = useCallback((type) => {
+    setInfra((prev) => ({ ...prev, type }));
+  }, [setInfra]);
+
+  const handleSetInfraDir = useCallback((dir) => {
+    setInfra((prev) => ({ ...prev, dir }));
+  }, [setInfra]);
+
+  // ── infra: docker-compose 노드 ───────────────────────────────────────────────
   const handleUpdateInfra = useCallback((idx, updated) => {
     setInfra((prev) => ({
       ...prev,
-      nodes: prev.nodes.map((n, i) => (i === idx ? updated : n)),
+      nodes: (prev.nodes || []).map((n, i) => (i === idx ? updated : n)),
     }));
   }, [setInfra]);
 
   const handleRemoveInfra = useCallback((idx) => {
     setInfra((prev) => ({
       ...prev,
-      nodes: prev.nodes.filter((_, i) => i !== idx),
+      nodes: (prev.nodes || []).filter((_, i) => i !== idx),
     }));
   }, [setInfra]);
 
   const handleAddInfra = useCallback(() => {
     setInfra((prev) => ({
       ...prev,
+      type: prev.type || "docker-compose",
       nodes: [...(prev.nodes || []), { id: "", container: "" }],
     }));
   }, [setInfra]);
 
+  // ── infra: terraform outputs (object ↔ 배열 인덱스 편집) ──────────────────────
+  const handleAddOutput = useCallback(() => {
+    setInfra((prev) => {
+      const arr = Object.entries(prev.outputs || {});
+      arr.push(["", ""]);
+      return { ...prev, outputs: Object.fromEntries(arr) };
+    });
+  }, [setInfra]);
+
+  const handleUpdateOutput = useCallback((idx, field, value) => {
+    setInfra((prev) => {
+      const arr = Object.entries(prev.outputs || {});
+      if (!arr[idx]) return prev;
+      if (field === "varName") arr[idx][0] = value;
+      else arr[idx][1] = value;
+      return { ...prev, outputs: Object.fromEntries(arr) };
+    });
+  }, [setInfra]);
+
+  const handleRemoveOutput = useCallback((idx) => {
+    setInfra((prev) => {
+      const arr = Object.entries(prev.outputs || {}).filter((_, i) => i !== idx);
+      return { ...prev, outputs: Object.fromEntries(arr) };
+    });
+  }, [setInfra]);
+
+  // InfraFlowNode에 전달할 핸들러 묶음
+  const infraHandlers = {
+    onSetType: handleSetInfraType,
+    onSetDir: handleSetInfraDir,
+    onAddNode: handleAddInfra,
+    onUpdateNode: handleUpdateInfra,
+    onRemoveNode: handleRemoveInfra,
+    onAddOutput: handleAddOutput,
+    onUpdateOutput: handleUpdateOutput,
+    onRemoveOutput: handleRemoveOutput,
+  };
+
   // ── RF 상태 초기화 ──────────────────────────────────────────────────────────
   const [nodes, setNodes, onNodesChange] = useNodesState(() => [
     ...toStepNodes(steps),
-    ...toInfraRFNodes(infra?.nodes || [], [], handleAddInfra, handleUpdateInfra, handleRemoveInfra),
+    ...toInfraRFNodes(infra, [], infraHandlers),
   ]);
   const [edges, setEdges, onEdgesChange] = useEdgesState(() => toEdges(steps));
   const [selectedId, setSelectedId] = useState(null);
@@ -159,12 +207,11 @@ export default function FlowPage() {
     setNodes((prev) => {
       const stepRF  = prev.filter((n) => n.type === "stepNode");
       const infraRF = prev.filter((n) => n.type === "infraNode");
-      const newInfraNodes = toInfraRFNodes(
-        infra?.nodes || [], infraRF, handleAddInfra, handleUpdateInfra, handleRemoveInfra
-      );
+      const newInfraNodes = toInfraRFNodes(infra, infraRF, infraHandlers);
       return [...stepRF, ...newInfraNodes];
     });
-  }, [infra, handleAddInfra, handleUpdateInfra, handleRemoveInfra]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [infra]);
 
   // ── 연결 ────────────────────────────────────────────────────────────────────
   const onConnect = useCallback(
@@ -324,9 +371,6 @@ export default function FlowPage() {
             <div className="flow-top-btns">
               <button className="btn-primary flow-add-btn" onClick={handleAddStep}>
                 + Step
-              </button>
-              <button className="flow-infra-btn" onClick={handleAddInfra}>
-                + Infra
               </button>
             </div>
           </Panel>

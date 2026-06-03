@@ -268,6 +268,28 @@ body.resizing { user-select: none; cursor: col-resize; }
   margin: 0 8px;
 }
 
+/* ── 타입 선택 / terraform 행 ── */
+.infra-flow-type-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+}
+.infra-flow-type-row select.infra-flow-input { flex: 1; }
+
+.infra-flow-outputs-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px 2px;
+}
+.infra-flow-hint {
+  padding: 0 10px 6px;
+  font-size: 10px; color: var(--text-muted); font-style: italic;
+}
+.infra-flow-output-row {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 8px;
+}
+.infra-flow-arrow { color: var(--text-muted); font-size: 12px; }
+.infra-flow-input--sm { font-size: 11px; padding: 4px 6px; min-width: 0; }
+
 /* ── 뷰 모드 항목 ── */
 .infra-flow-entry {
   display: flex; align-items: center; gap: 8px;
